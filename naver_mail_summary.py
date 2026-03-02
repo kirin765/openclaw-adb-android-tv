@@ -6,6 +6,7 @@ import os
 import re
 from datetime import datetime
 from email.header import decode_header
+from email.message import Message
 from email.utils import parsedate_to_datetime
 
 
@@ -34,7 +35,7 @@ def decode_mime(value: str) -> str:
     return "".join(out).strip()
 
 
-def extract_text(msg: email.message.Message, max_chars: int = 240) -> str:
+def extract_text(msg: Message, max_chars: int = 240) -> str:
     text = ""
     if msg.is_multipart():
         for part in msg.walk():
