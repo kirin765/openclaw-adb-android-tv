@@ -158,6 +158,59 @@ def test_adb_executor_can_power_on_and_wake_screen(monkeypatch):
     assert wake_result.message == "Woke screen"
 
 
+def test_adb_executor_can_open_tv_url(monkeypatch):
+    commands: list[list[str]] = []
+
+    class FakeProcess:
+        def __init__(self, cmd):
+            self.cmd = cmd
+            self.returncode = 0
+
+        def poll(self):
+            return 0
+
+        def communicate(self):
+            return "", ""
+
+        def wait(self, timeout=None):
+            return 0
+
+        def terminate(self):
+            return None
+
+        def kill(self):
+            return None
+
+    def fake_popen(cmd, stdout=None, stderr=None, text=None):
+        commands.append(cmd)
+        return FakeProcess(cmd)
+
+    monkeypatch.setenv("DEFAULT_ANDROID_TV_IP", "192.168.0.161")
+    settings_module.get_settings.cache_clear()
+    monkeypatch.setattr(adb_executor_module.subprocess, "Popen", fake_popen)
+
+    executor = AdbExecutor()
+    result = executor.execute(
+        IntentPayload(
+            intent="TV_OPEN_URL",
+            parameters={"url": "http://192.168.0.172:8000/?mode=tv&view=standby"},
+            target_device="android_tv",
+        )
+    )
+
+    assert commands[1] == [
+        "adb",
+        "shell",
+        "am",
+        "start",
+        "-a",
+        "android.intent.action.VIEW",
+        "-d",
+        "http://192.168.0.172:8000/?mode=tv&view=standby",
+    ]
+    assert result.raw["url"].endswith("view=standby")
+
+
 def test_adb_executor_lists_and_launches_apps(monkeypatch):
     commands: list[list[str]] = []
 

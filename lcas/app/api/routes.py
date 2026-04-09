@@ -4,6 +4,7 @@ import base64
 from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Request
 
 from app.core.settings import Settings, get_settings
 from app.models.schemas import (
@@ -486,6 +487,31 @@ def tv_text_input(
         requires_confirmation=False,
     )
     record = TaskRecord(command=payload.text, intent=intent)
+    task_store.create(record)
+    QueueService().enqueue(record.task_id, intent.model_dump(), background_tasks)
+    return CommandAcceptedResponse(task_id=record.task_id)
+
+
+@router.post("/tv/standby/open", response_model=CommandAcceptedResponse)
+def tv_open_standby(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> CommandAcceptedResponse:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+
+    standby_url = f"{str(request.base_url).rstrip('/')}/?mode=tv&view=standby"
+    intent = IntentPayload(
+        intent="TV_OPEN_URL",
+        parameters={"url": standby_url},
+        target_device="android_tv",
+        risk_level=RiskLevel.low,
+        source="web_ui",
+        requires_confirmation=False,
+    )
+    record = TaskRecord(command="대기화면 띄우기", intent=intent)
     task_store.create(record)
     QueueService().enqueue(record.task_id, intent.model_dump(), background_tasks)
     return CommandAcceptedResponse(task_id=record.task_id)

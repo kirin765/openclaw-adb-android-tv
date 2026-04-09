@@ -72,3 +72,20 @@ def test_tv_apps_state(monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["apps"][0]["label"] == "Netflix"
+
+
+def test_tv_standby_open(monkeypatch):
+    captured = {}
+
+    def fake_enqueue(self, task_id, intent_data, background_tasks=None):
+        captured["task_id"] = task_id
+        captured["intent_data"] = intent_data
+        return None
+
+    monkeypatch.setattr("app.api.routes.QueueService.enqueue", fake_enqueue)
+    response = client.post("/tv/standby/open", headers={"X-API-Token": "change-me"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["task_id"]
+    assert captured["intent_data"]["intent"] == "TV_OPEN_URL"
+    assert captured["intent_data"]["parameters"]["url"].endswith("/?mode=tv&view=standby")

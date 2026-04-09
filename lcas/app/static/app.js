@@ -1,6 +1,7 @@
 const apiTokenInput = document.getElementById('apiToken');
 const controlModeBtn = document.getElementById('controlModeBtn');
 const tvModeBtn = document.getElementById('tvModeBtn');
+const tvStandbyOverlayBtn = document.getElementById('tvStandbyOverlayBtn');
 const tvStandbyAddWeatherBtn = document.getElementById('tvStandbyAddWeatherBtn');
 const tvStandbyAddNewsBtn = document.getElementById('tvStandbyAddNewsBtn');
 const tvStandbyAddCalendarBtn = document.getElementById('tvStandbyAddCalendarBtn');
@@ -1648,9 +1649,16 @@ function applyScreenMode(mode) {
 }
 
 const urlMode = new URLSearchParams(window.location.search).get('mode');
+const urlView = new URLSearchParams(window.location.search).get('view');
 const savedMode = localStorage.getItem('lcas-screen-mode');
 const defaultScreenMode = window.matchMedia('(max-width: 900px)').matches ? 'control' : 'tv';
 applyScreenMode(urlMode || savedMode || defaultScreenMode);
+if (urlView === 'standby') {
+  window.setTimeout(() => {
+    applyScreenMode('tv');
+    openStandby();
+  }, 0);
+}
 
 function stopMirrorCapture() {
   if (mirrorCaptureTimer) {
@@ -2176,6 +2184,34 @@ function openStandby() {
   }
 }
 
+async function openTvStandby() {
+  const token = apiTokenInput.value.trim();
+  if (!token) {
+    alert('API 토큰을 입력하세요.');
+    return;
+  }
+
+  setStatus('submitting', 'TV 대기화면을 여는 중...');
+
+  const res = await fetch('/tv/standby/open', {
+    method: 'POST',
+    headers: {
+      'X-API-Token': token,
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    setStatus('failed', data.detail || data);
+    return;
+  }
+
+  taskIdEl.textContent = data.task_id;
+  setStatus('pending', 'TV 대기화면을 여는 작업이 등록되었습니다.');
+  cancelBtn.disabled = false;
+  pollTask(data.task_id, token);
+}
+
 function closeStandby() {
   standbyOverlay.classList.add('hidden');
 }
@@ -2480,6 +2516,8 @@ tvModeBtn.addEventListener('click', () => {
   applyScreenMode('tv');
 });
 
+tvStandbyOverlayBtn.addEventListener('click', openTvStandby);
+
 openUrlBtn.addEventListener('click', () => {
   openBrowserUrl();
 });
@@ -2520,7 +2558,7 @@ tvWakeScreenBtn.addEventListener('click', wakeScreenNow);
 tvPowerOffBtn.addEventListener('click', powerOffNow);
 schedulePowerBtn.addEventListener('click', schedulePowerOff);
 reminderAddBtn.addEventListener('click', scheduleReminder);
-standbyBtn.addEventListener('click', openStandby);
+standbyBtn.addEventListener('click', openTvStandby);
 closeStandbyBtn.addEventListener('click', closeStandby);
 newsOverlayBtn.addEventListener('click', openNewsOverlay);
 newsOverlayCloseBtn.addEventListener('click', closeNewsOverlay);

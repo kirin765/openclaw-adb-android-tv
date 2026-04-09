@@ -53,6 +53,13 @@ class AdbExecutor(Executor):
             self._run(cmd, cancel_requested)
             return TaskResult(message="Sent text input", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id, raw={"text": intent.parameters["text"]})
 
+        if intent.intent == "TV_OPEN_URL":
+            self._check_cancel(cancel_requested)
+            url = str(intent.parameters["url"])
+            cmd = [adb, "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url]
+            self._run(cmd, cancel_requested)
+            return TaskResult(message=f"Opened TV browser for {url}", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id, raw={"url": url})
+
         if intent.intent == "TV_POWER_OFF":
             self._check_cancel(cancel_requested)
             cmd = [adb, "shell", "input", "keyevent", "26"]
