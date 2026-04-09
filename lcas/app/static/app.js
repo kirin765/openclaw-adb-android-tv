@@ -18,6 +18,58 @@ const favoriteUrlInput = document.getElementById('favoriteUrlInput');
 const favoriteAddBtn = document.getElementById('favoriteAddBtn');
 const favoriteStatus = document.getElementById('favoriteStatus');
 const favoriteList = document.getElementById('favoriteList');
+const fridgeNameInput = document.getElementById('fridgeNameInput');
+const fridgeCategoryInput = document.getElementById('fridgeCategoryInput');
+const fridgeQuantityInput = document.getElementById('fridgeQuantityInput');
+const fridgeNoteInput = document.getElementById('fridgeNoteInput');
+const fridgeAddBtn = document.getElementById('fridgeAddBtn');
+const fridgeRefreshBtn = document.getElementById('fridgeRefreshBtn');
+const fridgeStatus = document.getElementById('fridgeStatus');
+const fridgeList = document.getElementById('fridgeList');
+const recipeList = document.getElementById('recipeList');
+const recipeCheckedAt = document.getElementById('recipeCheckedAt');
+const calendarTitleInput = document.getElementById('calendarTitleInput');
+const calendarLocationInput = document.getElementById('calendarLocationInput');
+const calendarStartInput = document.getElementById('calendarStartInput');
+const calendarEndInput = document.getElementById('calendarEndInput');
+const calendarAttendeesInput = document.getElementById('calendarAttendeesInput');
+const calendarTagInput = document.getElementById('calendarTagInput');
+const calendarNoteInput = document.getElementById('calendarNoteInput');
+const calendarAllDayInput = document.getElementById('calendarAllDayInput');
+const calendarAddBtn = document.getElementById('calendarAddBtn');
+const calendarRefreshBtn = document.getElementById('calendarRefreshBtn');
+const calendarStatus = document.getElementById('calendarStatus');
+const calendarTodayList = document.getElementById('calendarTodayList');
+const calendarUpcomingList = document.getElementById('calendarUpcomingList');
+const calendarCheckedAt = document.getElementById('calendarCheckedAt');
+const moodMemberInput = document.getElementById('moodMemberInput');
+const moodNoteInput = document.getElementById('moodNoteInput');
+const moodSliderInput = document.getElementById('moodSliderInput');
+const moodValueLabel = document.getElementById('moodValueLabel');
+const moodSaveBtn = document.getElementById('moodSaveBtn');
+const moodRefreshBtn = document.getElementById('moodRefreshBtn');
+const moodStatus = document.getElementById('moodStatus');
+const moodList = document.getElementById('moodList');
+const moodCheckedAt = document.getElementById('moodCheckedAt');
+const moodChart = document.getElementById('moodChart');
+const todoTitleInput = document.getElementById('todoTitleInput');
+const todoOwnerInput = document.getElementById('todoOwnerInput');
+const todoDueInput = document.getElementById('todoDueInput');
+const todoNoteInput = document.getElementById('todoNoteInput');
+const todoAddBtn = document.getElementById('todoAddBtn');
+const todoRefreshBtn = document.getElementById('todoRefreshBtn');
+const todoStatus = document.getElementById('todoStatus');
+const todoList = document.getElementById('todoList');
+const todoCheckedAt = document.getElementById('todoCheckedAt');
+const boardAuthorInput = document.getElementById('boardAuthorInput');
+const boardTitleInput = document.getElementById('boardTitleInput');
+const boardContentInput = document.getElementById('boardContentInput');
+const boardPinnedInput = document.getElementById('boardPinnedInput');
+const boardAddBtn = document.getElementById('boardAddBtn');
+const boardRefreshBtn = document.getElementById('boardRefreshBtn');
+const boardStatus = document.getElementById('boardStatus');
+const boardList = document.getElementById('boardList');
+const boardCheckedAt = document.getElementById('boardCheckedAt');
 const tvTextInput = document.getElementById('tvTextInput');
 const tvTextSendBtn = document.getElementById('tvTextSendBtn');
 const tvPowerOnBtn = document.getElementById('tvPowerOnBtn');
@@ -50,6 +102,18 @@ const newsOverlayTitle = document.getElementById('newsOverlayTitle');
 const newsOverlayUpdatedAt = document.getElementById('newsOverlayUpdatedAt');
 const newsOverlayList = document.getElementById('newsOverlayList');
 const newsOverlayCloseBtn = document.getElementById('newsOverlayCloseBtn');
+const mirrorLabelInput = document.getElementById('mirrorLabelInput');
+const mirrorStartBtn = document.getElementById('mirrorStartBtn');
+const mirrorStopBtn = document.getElementById('mirrorStopBtn');
+const mirrorStatus = document.getElementById('mirrorStatus');
+const mirrorImage = document.getElementById('mirrorImage');
+const mirrorEmpty = document.getElementById('mirrorEmpty');
+const mirrorOverlayBtn = document.getElementById('mirrorOverlayBtn');
+const mirrorOverlay = document.getElementById('mirrorOverlay');
+const mirrorOverlayImage = document.getElementById('mirrorOverlayImage');
+const mirrorOverlayTitle = document.getElementById('mirrorOverlayTitle');
+const mirrorOverlayMeta = document.getElementById('mirrorOverlayMeta');
+const mirrorOverlayCloseBtn = document.getElementById('mirrorOverlayCloseBtn');
 const standbyBtn = document.getElementById('standbyBtn');
 const standbyOverlay = document.getElementById('standbyOverlay');
 const closeStandbyBtn = document.getElementById('closeStandbyBtn');
@@ -71,6 +135,7 @@ const penSizeInput = document.getElementById('penSize');
 const clearBoardBtn = document.getElementById('clearBoardBtn');
 
 const whiteboardCtx = whiteboardCanvas.getContext('2d');
+const moodChartCtx = moodChart.getContext('2d');
 const whiteboardClientId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
 
 let pollHandle = null;
@@ -83,12 +148,33 @@ let activeStrokeId = null;
 let activeStroke = null;
 let weatherState = null;
 let mediaState = { uploads: [], favorites: [] };
+let fridgeState = { items: [], recommendations: [], checked_at: null };
+let calendarState = { events: [], today_events: [], upcoming_events: [], checked_at: null };
+let moodState = { records: [], series: [], members: [], checked_at: null };
+let todoState = { items: [], checked_at: null };
+let boardState = { posts: [], checked_at: null };
 let reminderState = [];
 let newsState = null;
+let mirrorState = null;
 let currentPreviewType = 'none';
 let reminderSocket = null;
 let reminderReconnectHandle = null;
 let activeReminder = null;
+let boardSocket = null;
+let boardReconnectHandle = null;
+let moodSocket = null;
+let moodReconnectHandle = null;
+let todoSocket = null;
+let todoReconnectHandle = null;
+let mirrorSocket = null;
+let mirrorReconnectHandle = null;
+let mirrorCaptureStream = null;
+let mirrorCaptureVideo = null;
+let mirrorCaptureCanvas = null;
+let mirrorCaptureCtx = null;
+let mirrorCaptureTimer = null;
+let mirrorCaptureFrameId = null;
+let mirrorOverlayActive = false;
 
 function setStatus(status, result) {
   taskStatusEl.textContent = status;
@@ -247,6 +333,479 @@ function renderFavoriteList() {
   }
 }
 
+function fridgeCategoryLabel(category) {
+  if (category === 'side_dish') return '반찬';
+  return '재료';
+}
+
+function renderFridgeItems(items) {
+  fridgeList.innerHTML = '';
+  if (!items.length) {
+    fridgeList.innerHTML = '<div class="fineprint">등록된 재료나 반찬이 없습니다.</div>';
+    return;
+  }
+
+  for (const item of items) {
+    const card = document.createElement('div');
+    card.className = 'fridge-item';
+    card.innerHTML = `
+      <strong>${item.name}</strong>
+      <div class="meta">${fridgeCategoryLabel(item.category)}${item.quantity ? ` · ${item.quantity}` : ''}</div>
+      <div class="meta">${item.note || '메모 없음'}</div>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '삭제';
+    deleteBtn.addEventListener('click', async () => {
+      const res = await fetch(`/fridge/items/${item.fridge_item_id}`, {
+        method: 'DELETE',
+        headers: apiHeaders(apiTokenInput.value.trim()),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        fridgeStatus.textContent = data.detail || '삭제 실패';
+        return;
+      }
+      fridgeStatus.textContent = '항목을 삭제했습니다.';
+      await loadFridgeState();
+    });
+    actions.append(deleteBtn);
+    card.append(actions);
+    fridgeList.appendChild(card);
+  }
+}
+
+function renderRecipeList(recommendations, checkedAt) {
+  recipeList.innerHTML = '';
+  if (!recommendations.length) {
+    recipeList.innerHTML = '<div class="fineprint">등록된 재료를 바탕으로 추천할 레시피가 없습니다.</div>';
+    recipeCheckedAt.textContent = checkedAt || '';
+    return;
+  }
+
+  for (const recipe of recommendations) {
+    const card = document.createElement('div');
+    card.className = 'recipe-item';
+    card.innerHTML = `
+      <strong>${recipe.title}</strong>
+      <div class="meta">점수 ${recipe.score} · ${recipe.description}</div>
+      <div class="recipe-tags">
+        <span>맞는 재료: ${recipe.matched_items.length ? recipe.matched_items.join(', ') : '없음'}</span>
+        <span>부족한 재료: ${recipe.missing_items.length ? recipe.missing_items.join(', ') : '없음'}</span>
+      </div>
+    `;
+    if (recipe.steps && recipe.steps.length) {
+      const steps = document.createElement('ol');
+      steps.className = 'recipe-steps';
+      for (const step of recipe.steps) {
+        const li = document.createElement('li');
+        li.textContent = step;
+        steps.appendChild(li);
+      }
+      card.appendChild(steps);
+    }
+    recipeList.appendChild(card);
+  }
+
+  recipeCheckedAt.textContent = checkedAt || '';
+}
+
+function formatCalendarTime(value) {
+  if (!value) return '시간 정보 없음';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function renderCalendarItems(items, mount, emptyMessage) {
+  mount.innerHTML = '';
+  if (!items.length) {
+    mount.innerHTML = `<div class="fineprint">${emptyMessage}</div>`;
+    return;
+  }
+
+  for (const event of items) {
+    const card = document.createElement('div');
+    card.className = 'calendar-item';
+    card.innerHTML = `
+      <strong>${event.title}</strong>
+      <div class="meta">${event.all_day ? '하루 일정' : `${formatCalendarTime(event.start_at)}${event.end_at ? ` ~ ${formatCalendarTime(event.end_at)}` : ''}`}</div>
+      <div class="calendar-tags">${event.tag ? `<span class="calendar-tag calendar-tag-brown">${event.tag}</span>` : ''}</div>
+      <div class="meta">${event.location || '장소 없음'}</div>
+      <div class="meta">${event.attendees && event.attendees.length ? event.attendees.join(', ') : '가족 구성원 미지정'}</div>
+      <div class="meta">${event.note || '메모 없음'}</div>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '삭제';
+    deleteBtn.addEventListener('click', async () => {
+      const res = await fetch(`/family-calendar/events/${event.calendar_event_id}`, {
+        method: 'DELETE',
+        headers: apiHeaders(apiTokenInput.value.trim()),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        calendarStatus.textContent = data.detail || '삭제 실패';
+        return;
+      }
+      calendarStatus.textContent = '일정을 삭제했습니다.';
+      await loadCalendarState();
+    });
+    actions.append(deleteBtn);
+    card.append(actions);
+    mount.appendChild(card);
+  }
+}
+
+function moodLabelForValue(value) {
+  const labels = {
+    1: '매우 힘듦',
+    2: '조금 힘듦',
+    3: '보통',
+    4: '좋음',
+    5: '매우 좋음',
+  };
+  return labels[value] || '보통';
+}
+
+function updateMoodValueLabel() {
+  const value = Number(moodSliderInput.value);
+  moodValueLabel.textContent = moodLabelForValue(value);
+}
+
+function renderMoodRecords(records) {
+  moodList.innerHTML = '';
+  if (!records.length) {
+    moodList.innerHTML = '<div class="fineprint">아직 감정 기록이 없습니다.</div>';
+    return;
+  }
+
+  for (const record of records) {
+    const card = document.createElement('div');
+    card.className = 'mood-item';
+    card.innerHTML = `
+      <div class="mood-row">
+        <strong>${record.member}</strong>
+        <span class="mood-badge mood-badge-${record.mood}">${moodLabelForValue(record.mood)}</span>
+      </div>
+      <div class="meta">${formatCalendarTime(record.created_at)}</div>
+      <div class="meta">${record.note || '메모 없음'}</div>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '삭제';
+    deleteBtn.addEventListener('click', async () => {
+      const res = await fetch(`/family-mood/records/${record.mood_record_id}`, {
+        method: 'DELETE',
+        headers: apiHeaders(apiTokenInput.value.trim()),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        moodStatus.textContent = data.detail || '삭제 실패';
+        return;
+      }
+      moodStatus.textContent = '감정 기록을 삭제했습니다.';
+      await loadMoodState();
+    });
+    actions.append(deleteBtn);
+    card.append(actions);
+    moodList.appendChild(card);
+  }
+}
+
+function resizeMoodChartCanvas() {
+  const rect = moodChart.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  moodChart.width = Math.max(1, Math.floor(rect.width * dpr));
+  moodChart.height = Math.max(1, Math.floor(rect.height * dpr));
+  moodChartCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawMoodChart();
+}
+
+function drawMoodChart() {
+  const width = moodChart.getBoundingClientRect().width;
+  const height = moodChart.getBoundingClientRect().height;
+  moodChartCtx.clearRect(0, 0, width, height);
+
+  const series = moodState.series || [];
+  if (!series.length || series.every((item) => !item.points || !item.points.length)) {
+    moodChartCtx.fillStyle = '#94a3b8';
+    moodChartCtx.font = '14px system-ui, sans-serif';
+    moodChartCtx.fillText('기록이 쌓이면 멤버별 감정 추이가 여기에 표시됩니다.', 16, 24);
+    return;
+  }
+
+  const padding = { top: 24, right: 16, bottom: 36, left: 48 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const today = new Date();
+  const dates = [];
+  for (let offset = 13; offset >= 0; offset -= 1) {
+    const day = new Date(today);
+    day.setDate(today.getDate() - offset);
+    dates.push(day.toISOString().slice(0, 10));
+  }
+
+  moodChartCtx.strokeStyle = 'rgba(148, 163, 184, 0.24)';
+  moodChartCtx.fillStyle = '#cbd5e1';
+  moodChartCtx.lineWidth = 1;
+  moodChartCtx.font = '12px system-ui, sans-serif';
+
+  for (let level = 1; level <= 5; level += 1) {
+    const y = padding.top + chartHeight - ((level - 1) / 4) * chartHeight;
+    moodChartCtx.beginPath();
+    moodChartCtx.moveTo(padding.left, y);
+    moodChartCtx.lineTo(width - padding.right, y);
+    moodChartCtx.stroke();
+    moodChartCtx.fillText(String(level), 12, y + 4);
+  }
+
+  for (let i = 0; i < dates.length; i += 1) {
+    if (i % 2 !== 0) continue;
+    const x = padding.left + (i / (dates.length - 1)) * chartWidth;
+    moodChartCtx.beginPath();
+    moodChartCtx.moveTo(x, padding.top);
+    moodChartCtx.lineTo(x, padding.top + chartHeight);
+    moodChartCtx.stroke();
+    moodChartCtx.save();
+    moodChartCtx.translate(x - 12, height - 12);
+    moodChartCtx.rotate(-Math.PI / 4);
+    moodChartCtx.fillText(dates[i].slice(5), 0, 0);
+    moodChartCtx.restore();
+  }
+
+  moodChartCtx.font = '12px system-ui, sans-serif';
+  let legendY = 16;
+  for (const item of series.slice(0, 4)) {
+    moodChartCtx.fillStyle = item.color || '#60a5fa';
+    moodChartCtx.fillRect(width - 150, legendY - 8, 10, 10);
+    moodChartCtx.fillStyle = '#e2e8f0';
+    moodChartCtx.fillText(item.member, width - 132, legendY);
+    legendY += 16;
+  }
+
+  for (const item of series) {
+    const pointByDate = new Map((item.points || []).map((point) => [point.date, point]));
+    moodChartCtx.strokeStyle = item.color || '#60a5fa';
+    moodChartCtx.lineWidth = 2;
+    moodChartCtx.beginPath();
+    let segmentStarted = false;
+
+    for (let index = 0; index < dates.length; index += 1) {
+      const dateKey = dates[index];
+      const point = pointByDate.get(dateKey);
+      if (!point) {
+        segmentStarted = false;
+        continue;
+      }
+      const x = padding.left + (index / (dates.length - 1)) * chartWidth;
+      const y = padding.top + chartHeight - ((point.mood - 1) / 4) * chartHeight;
+      if (!segmentStarted) {
+        moodChartCtx.moveTo(x, y);
+        segmentStarted = true;
+      } else {
+        moodChartCtx.lineTo(x, y);
+      }
+    }
+    moodChartCtx.stroke();
+
+    for (let index = 0; index < dates.length; index += 1) {
+      const dateKey = dates[index];
+      const point = pointByDate.get(dateKey);
+      if (!point) continue;
+      const x = padding.left + (index / (dates.length - 1)) * chartWidth;
+      const y = padding.top + chartHeight - ((point.mood - 1) / 4) * chartHeight;
+      moodChartCtx.beginPath();
+      moodChartCtx.fillStyle = item.color || '#60a5fa';
+      moodChartCtx.arc(x, y, 3.5, 0, Math.PI * 2);
+      moodChartCtx.fill();
+    }
+  }
+}
+
+function formatTodoCheckedAt(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return `마지막 확인 ${value}`;
+  return `마지막 확인 ${date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}
+
+function renderTodoItems(items) {
+  todoList.innerHTML = '';
+  if (!items.length) {
+    todoList.innerHTML = '<div class="fineprint">등록된 TODO가 없습니다.</div>';
+    return;
+  }
+
+  for (const item of items) {
+    const card = document.createElement('div');
+    card.className = item.done ? 'todo-item done' : 'todo-item';
+    card.innerHTML = `
+      <div class="todo-row">
+        <strong>${item.title}</strong>
+        <span class="todo-badge ${item.done ? 'todo-badge-done' : 'todo-badge-open'}">${item.done ? '완료' : '진행중'}</span>
+      </div>
+      <div class="meta">${item.owner || '담당자 없음'}${item.due_at ? ` · ${formatCalendarTime(item.due_at)}` : ''}</div>
+      <div class="meta">${item.note || '메모 없음'}</div>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+
+    const toggleLabel = document.createElement('label');
+    toggleLabel.className = 'inline-check';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = Boolean(item.done);
+    checkbox.addEventListener('change', async () => {
+      const res = await fetch(`/family-todo/items/${item.todo_item_id}`, {
+        method: 'PATCH',
+        headers: apiHeaders(apiTokenInput.value.trim(), { 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ done: checkbox.checked }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        todoStatus.textContent = data.detail || '상태 변경 실패';
+        checkbox.checked = !checkbox.checked;
+        return;
+      }
+      todoStatus.textContent = checkbox.checked ? 'TODO를 완료로 표시했습니다.' : 'TODO를 미완료로 되돌렸습니다.';
+      await loadTodoState();
+    });
+    const checkboxText = document.createElement('span');
+    checkboxText.textContent = '완료';
+    toggleLabel.append(checkbox, checkboxText);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '삭제';
+    deleteBtn.addEventListener('click', async () => {
+      const res = await fetch(`/family-todo/items/${item.todo_item_id}`, {
+        method: 'DELETE',
+        headers: apiHeaders(apiTokenInput.value.trim()),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        todoStatus.textContent = data.detail || '삭제 실패';
+        return;
+      }
+      todoStatus.textContent = 'TODO를 삭제했습니다.';
+      await loadTodoState();
+    });
+
+    actions.append(toggleLabel, deleteBtn);
+    card.append(actions);
+    todoList.appendChild(card);
+  }
+}
+
+async function loadTodoState() {
+  try {
+    const res = await fetch('/family-todo/state');
+    const data = await res.json();
+    if (!res.ok) {
+      todoStatus.textContent = data.detail || 'TODO 목록을 불러오지 못했습니다.';
+      return;
+    }
+    todoState = data;
+    renderTodoItems(data.items || []);
+    todoCheckedAt.textContent = formatTodoCheckedAt(data.checked_at);
+  } catch (err) {
+    todoStatus.textContent = `TODO 목록 오류: ${err}`;
+  }
+}
+
+function connectTodo() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  todoSocket = new WebSocket(`${protocol}//${window.location.host}/ws/family-todo`);
+  todoSocket.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'snapshot') {
+      todoState = {
+        items: data.items || [],
+        checked_at: data.checked_at || new Date().toISOString(),
+      };
+      renderTodoItems(todoState.items);
+      todoCheckedAt.textContent = formatTodoCheckedAt(todoState.checked_at);
+    }
+  });
+  todoSocket.addEventListener('close', () => {
+    if (todoReconnectHandle) clearTimeout(todoReconnectHandle);
+    todoReconnectHandle = setTimeout(connectTodo, 1000);
+  });
+}
+
+function formatBoardCheckedAt(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return `마지막 확인 ${value}`;
+  return `마지막 확인 ${date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}
+
+function renderBoardPosts(posts) {
+  boardList.innerHTML = '';
+  if (!posts.length) {
+    boardList.innerHTML = '<div class="fineprint">등록된 게시글이 없습니다.</div>';
+    return;
+  }
+
+  for (const post of posts) {
+    const card = document.createElement('div');
+    card.className = post.pinned ? 'board-item pinned' : 'board-item';
+    card.innerHTML = `
+      <div class="board-head">
+        <strong>${post.title}</strong>
+        ${post.pinned ? '<span class="board-badge">고정</span>' : ''}
+      </div>
+      <div class="meta">${post.author} · ${formatCalendarTime(post.created_at)}</div>
+      <div class="board-content">${post.content}</div>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.textContent = '삭제';
+    deleteBtn.addEventListener('click', async () => {
+      const res = await fetch(`/family-board/posts/${post.board_post_id}`, {
+        method: 'DELETE',
+        headers: apiHeaders(apiTokenInput.value.trim()),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        boardStatus.textContent = data.detail || '삭제 실패';
+        return;
+      }
+      boardStatus.textContent = '게시글을 삭제했습니다.';
+      await loadBoardState();
+    });
+    actions.append(deleteBtn);
+    card.append(actions);
+    boardList.appendChild(card);
+  }
+}
+
 function renderPowerSchedules(schedules) {
   powerScheduleList.innerHTML = '';
   if (!schedules.length) {
@@ -379,6 +938,27 @@ function renderNewsList(items, mount) {
   }
 }
 
+function renderMirrorState(state) {
+  mirrorState = state;
+  const hasFrame = Boolean(state && state.frame_data_url);
+  if (hasFrame) {
+    mirrorImage.src = state.frame_data_url;
+    mirrorOverlayImage.src = state.frame_data_url;
+    mirrorEmpty.style.display = 'none';
+  } else {
+    mirrorImage.removeAttribute('src');
+    mirrorOverlayImage.removeAttribute('src');
+    mirrorEmpty.style.display = 'grid';
+  }
+  mirrorStatus.textContent = state && state.active
+    ? `공유 중: ${state.source_label || '미지정'} · 프레임 ${state.frame_count || 0}`
+    : '지원되는 모바일 브라우저에서 시작할 수 있습니다.';
+  mirrorOverlayTitle.textContent = state && state.active ? (state.source_label || '실시간 미러링') : '대기 중';
+  mirrorOverlayMeta.textContent = state && state.active
+    ? `업데이트 ${state.updated_at || '-'} · 프레임 ${state.frame_count || 0}`
+    : '아직 공유 중인 화면이 없습니다.';
+}
+
 function updateWeatherDisplay(weather) {
   if (!weather) return;
   weatherLabel.textContent = weather.label || '-';
@@ -450,6 +1030,136 @@ async function loadMediaLibrary() {
   }
 }
 
+function formatRecipeCheckedAt(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return `마지막 확인 ${value}`;
+  return `마지막 확인 ${date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}
+
+async function loadFridgeState() {
+  try {
+    const res = await fetch('/fridge/state');
+    const data = await res.json();
+    if (!res.ok) {
+      fridgeStatus.textContent = data.detail || '냉장고 상태를 불러오지 못했습니다.';
+      return;
+    }
+    fridgeState = data;
+    renderFridgeItems(data.items || []);
+    renderRecipeList(data.recommendations || [], formatRecipeCheckedAt(data.checked_at));
+  } catch (err) {
+    fridgeStatus.textContent = `냉장고 상태 오류: ${err}`;
+  }
+}
+
+function formatCalendarCheckedAt(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return `마지막 확인 ${value}`;
+  return `마지막 확인 ${date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}
+
+async function loadCalendarState() {
+  try {
+    const res = await fetch('/family-calendar/state');
+    const data = await res.json();
+    if (!res.ok) {
+      calendarStatus.textContent = data.detail || '가족 캘린더를 불러오지 못했습니다.';
+      return;
+    }
+    calendarState = data;
+    renderCalendarItems(data.today_events || [], calendarTodayList, '오늘 일정이 없습니다.');
+    renderCalendarItems(data.upcoming_events || [], calendarUpcomingList, '다가오는 일정이 없습니다.');
+    calendarCheckedAt.textContent = formatCalendarCheckedAt(data.checked_at);
+  } catch (err) {
+    calendarStatus.textContent = `가족 캘린더 오류: ${err}`;
+  }
+}
+
+async function loadMoodState() {
+  try {
+    const res = await fetch('/family-mood/state');
+    const data = await res.json();
+    if (!res.ok) {
+      moodStatus.textContent = data.detail || '감정 기록을 불러오지 못했습니다.';
+      return;
+    }
+    moodState = data;
+    renderMoodRecords(data.records || []);
+    moodCheckedAt.textContent = formatCalendarCheckedAt(data.checked_at);
+    drawMoodChart();
+  } catch (err) {
+    moodStatus.textContent = `감정 기록 오류: ${err}`;
+  }
+}
+
+function connectMood() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  moodSocket = new WebSocket(`${protocol}//${window.location.host}/ws/family-mood`);
+  moodSocket.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'snapshot') {
+      moodState = {
+        records: data.records || [],
+        series: moodState.series || [],
+        members: moodState.members || [],
+        checked_at: data.checked_at || new Date().toISOString(),
+      };
+      void loadMoodState();
+    }
+  });
+  moodSocket.addEventListener('close', () => {
+    if (moodReconnectHandle) clearTimeout(moodReconnectHandle);
+    moodReconnectHandle = setTimeout(connectMood, 1000);
+  });
+}
+
+async function loadBoardState() {
+  try {
+    const res = await fetch('/family-board/state');
+    const data = await res.json();
+    if (!res.ok) {
+      boardStatus.textContent = data.detail || '가족 게시판을 불러오지 못했습니다.';
+      return;
+    }
+    boardState = data;
+    renderBoardPosts(data.posts || []);
+    boardCheckedAt.textContent = formatBoardCheckedAt(data.checked_at);
+  } catch (err) {
+    boardStatus.textContent = `가족 게시판 오류: ${err}`;
+  }
+}
+
+function connectBoard() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  boardSocket = new WebSocket(`${protocol}//${window.location.host}/ws/family-board`);
+  boardSocket.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'snapshot') {
+      boardState = { posts: data.posts || [], checked_at: data.checked_at || new Date().toISOString() };
+      renderBoardPosts(boardState.posts);
+      boardCheckedAt.textContent = formatBoardCheckedAt(boardState.checked_at);
+    }
+  });
+  boardSocket.addEventListener('close', () => {
+    if (boardReconnectHandle) clearTimeout(boardReconnectHandle);
+    boardReconnectHandle = setTimeout(connectBoard, 1000);
+  });
+}
+
 async function loadPowerSchedules() {
   try {
     const res = await fetch('/tv/power/schedule');
@@ -477,6 +1187,149 @@ async function loadReminders() {
   } catch (err) {
     reminderStatus.textContent = `알림 목록 오류: ${err}`;
   }
+}
+
+async function loadMirrorState() {
+  try {
+    const res = await fetch('/mirror/state');
+    const data = await res.json();
+    if (!res.ok) {
+      mirrorStatus.textContent = data.detail || '미러링 상태를 불러오지 못했습니다.';
+      return;
+    }
+    renderMirrorState(data);
+  } catch (err) {
+    mirrorStatus.textContent = `미러링 상태 오류: ${err}`;
+  }
+}
+
+function connectMirror() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  mirrorSocket = new WebSocket(`${protocol}//${window.location.host}/ws/mirror`);
+  mirrorSocket.addEventListener('message', (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'snapshot' || data.type === 'frame' || data.type === 'stop') {
+      renderMirrorState(data.mirror || {});
+    }
+  });
+  mirrorSocket.addEventListener('close', () => {
+    if (mirrorReconnectHandle) clearTimeout(mirrorReconnectHandle);
+    mirrorReconnectHandle = setTimeout(connectMirror, 1000);
+  });
+}
+
+function stopMirrorCapture() {
+  if (mirrorCaptureTimer) {
+    clearTimeout(mirrorCaptureTimer);
+    mirrorCaptureTimer = null;
+  }
+  if (mirrorCaptureFrameId) {
+    cancelAnimationFrame(mirrorCaptureFrameId);
+    mirrorCaptureFrameId = null;
+  }
+  if (mirrorCaptureVideo) {
+    mirrorCaptureVideo.pause();
+    mirrorCaptureVideo.srcObject = null;
+    mirrorCaptureVideo = null;
+  }
+  if (mirrorCaptureStream) {
+    for (const track of mirrorCaptureStream.getTracks()) {
+      track.stop();
+    }
+    mirrorCaptureStream = null;
+  }
+  if (mirrorSocket && mirrorSocket.readyState === WebSocket.OPEN) {
+    mirrorSocket.send(JSON.stringify({ type: 'stop' }));
+  }
+  renderMirrorState({
+    active: false,
+    source_label: mirrorState && mirrorState.source_label ? mirrorState.source_label : '',
+    frame_data_url: null,
+    started_at: mirrorState && mirrorState.started_at ? mirrorState.started_at : null,
+    updated_at: mirrorState && mirrorState.updated_at ? mirrorState.updated_at : null,
+    frame_count: mirrorState && mirrorState.frame_count ? mirrorState.frame_count : 0,
+  });
+  mirrorStatus.textContent = '미러링이 중지되었습니다.';
+}
+
+function sendMirrorFrame() {
+  if (!mirrorCaptureStream || !mirrorCaptureVideo || !mirrorCaptureCanvas || !mirrorCaptureCtx) {
+    return;
+  }
+  if (mirrorCaptureVideo.readyState < 2 || !mirrorCaptureVideo.videoWidth || !mirrorCaptureVideo.videoHeight) {
+    mirrorCaptureTimer = setTimeout(sendMirrorFrame, 120);
+    return;
+  }
+  const maxWidth = 960;
+  const width = mirrorCaptureVideo.videoWidth;
+  const height = mirrorCaptureVideo.videoHeight;
+  const scale = Math.min(1, maxWidth / width);
+  const canvasWidth = Math.max(1, Math.round(width * scale));
+  const canvasHeight = Math.max(1, Math.round(height * scale));
+  mirrorCaptureCanvas.width = canvasWidth;
+  mirrorCaptureCanvas.height = canvasHeight;
+  mirrorCaptureCtx.drawImage(mirrorCaptureVideo, 0, 0, canvasWidth, canvasHeight);
+  const frameDataUrl = mirrorCaptureCanvas.toDataURL('image/jpeg', 0.72);
+  if (mirrorSocket && mirrorSocket.readyState === WebSocket.OPEN) {
+    mirrorSocket.send(JSON.stringify({
+      type: 'frame',
+      frame_data_url: frameDataUrl,
+      source_label: mirrorLabelInput.value.trim(),
+      started_at: new Date().toISOString(),
+    }));
+  }
+  mirrorCaptureTimer = setTimeout(sendMirrorFrame, 160);
+}
+
+async function startMirrorCapture() {
+  const sourceLabel = mirrorLabelInput.value.trim() || 'Mobile';
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    mirrorStatus.textContent = '이 브라우저는 화면 공유를 지원하지 않습니다.';
+    return;
+  }
+  try {
+    stopMirrorCapture();
+    mirrorStatus.textContent = '화면 공유 권한을 요청하는 중...';
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    mirrorCaptureStream = stream;
+    mirrorCaptureVideo = document.createElement('video');
+    mirrorCaptureVideo.autoplay = true;
+    mirrorCaptureVideo.muted = true;
+    mirrorCaptureVideo.playsInline = true;
+    mirrorCaptureVideo.srcObject = stream;
+    await mirrorCaptureVideo.play();
+    mirrorCaptureCanvas = document.createElement('canvas');
+    mirrorCaptureCtx = mirrorCaptureCanvas.getContext('2d', { alpha: false });
+    if (mirrorSocket && mirrorSocket.readyState === WebSocket.OPEN) {
+      mirrorSocket.send(JSON.stringify({
+        type: 'start',
+        source_label: sourceLabel,
+        started_at: new Date().toISOString(),
+      }));
+    }
+    mirrorStatus.textContent = '미러링을 전송하는 중입니다.';
+    sendMirrorFrame();
+    stream.getVideoTracks()[0].addEventListener('ended', () => {
+      stopMirrorCapture();
+      mirrorStatus.textContent = '미러링이 중지되었습니다.';
+    });
+  } catch (err) {
+    mirrorStatus.textContent = `미러링 시작 실패: ${err}`;
+    stopMirrorCapture();
+  }
+}
+
+function openMirrorOverlay() {
+  mirrorOverlay.classList.remove('hidden');
+  mirrorOverlayActive = true;
+  if (mirrorState) {
+    renderMirrorState(mirrorState);
+  }
+}
+
+function closeMirrorOverlay() {
+  mirrorOverlay.classList.add('hidden');
+  mirrorOverlayActive = false;
 }
 
 async function uploadSelectedFiles() {
@@ -552,6 +1405,186 @@ async function addFavoriteVideo() {
   favoriteTitleInput.value = '';
   favoriteUrlInput.value = '';
   await loadMediaLibrary();
+}
+
+async function addFridgeItem() {
+  const token = apiTokenInput.value.trim();
+  const name = fridgeNameInput.value.trim();
+  const category = fridgeCategoryInput.value;
+  const quantity = fridgeQuantityInput.value.trim();
+  const note = fridgeNoteInput.value.trim();
+  if (!token) {
+    alert('API 토큰을 입력하세요.');
+    return;
+  }
+  if (!name) {
+    fridgeStatus.textContent = '이름을 입력하세요.';
+    return;
+  }
+  const res = await fetch('/fridge/items', {
+    method: 'POST',
+    headers: apiHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ name, category, quantity, note }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    fridgeStatus.textContent = data.detail || '냉장고 항목 등록 실패';
+    return;
+  }
+  fridgeStatus.textContent = `${data.name}을(를) 등록했습니다.`;
+  fridgeNameInput.value = '';
+  fridgeQuantityInput.value = '';
+  fridgeNoteInput.value = '';
+  fridgeNameInput.focus();
+  await loadFridgeState();
+}
+
+async function addCalendarEvent() {
+  const token = apiTokenInput.value.trim();
+  const title = calendarTitleInput.value.trim();
+  const startAt = calendarStartInput.value.trim();
+  const endAt = calendarEndInput.value.trim();
+  const location = calendarLocationInput.value.trim();
+  const attendees = calendarAttendeesInput.value.trim();
+  const tag = calendarTagInput.value.trim();
+  const note = calendarNoteInput.value.trim();
+  if (!token) {
+    alert('API 토큰을 입력하세요.');
+    return;
+  }
+  if (!title || !startAt) {
+    calendarStatus.textContent = '제목과 시작 시간은 필수입니다.';
+    return;
+  }
+  if (endAt && endAt <= startAt) {
+    calendarStatus.textContent = '종료 시간은 시작 시간보다 뒤여야 합니다.';
+    return;
+  }
+  const res = await fetch('/family-calendar/events', {
+    method: 'POST',
+    headers: apiHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      title,
+      start_at: startAt,
+      end_at: endAt,
+      location,
+      attendees,
+      tag,
+      note,
+      all_day: calendarAllDayInput.checked,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    calendarStatus.textContent = data.detail || '가족 캘린더 등록 실패';
+    return;
+  }
+  calendarStatus.textContent = `${data.title} 일정을 등록했습니다.`;
+  calendarTitleInput.value = '';
+  calendarLocationInput.value = '';
+  calendarStartInput.value = '';
+  calendarEndInput.value = '';
+  calendarAttendeesInput.value = '';
+  calendarTagInput.value = '김은영똥';
+  calendarNoteInput.value = '';
+  calendarAllDayInput.checked = false;
+  await loadCalendarState();
+}
+
+async function addMoodRecord() {
+  const token = apiTokenInput.value.trim();
+  const member = moodMemberInput.value.trim();
+  const note = moodNoteInput.value.trim();
+  const mood = Number(moodSliderInput.value);
+  if (!token) {
+    alert('API 토큰을 입력하세요.');
+    return;
+  }
+  if (!member) {
+    moodStatus.textContent = '가족 구성원 이름을 입력하세요.';
+    return;
+  }
+  const res = await fetch('/family-mood/records', {
+    method: 'POST',
+    headers: apiHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ member, mood, note }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    moodStatus.textContent = data.detail || '감정 기록 실패';
+    return;
+  }
+  moodStatus.textContent = `${data.member}의 감정을 저장했습니다.`;
+  moodNoteInput.value = '';
+  await loadMoodState();
+}
+
+async function addTodoItem() {
+  const token = apiTokenInput.value.trim();
+  const title = todoTitleInput.value.trim();
+  const owner = todoOwnerInput.value.trim();
+  const dueAt = todoDueInput.value.trim();
+  const note = todoNoteInput.value.trim();
+  if (!token) {
+    alert('API 토큰을 입력하세요.');
+    return;
+  }
+  if (!title) {
+    todoStatus.textContent = '할 일을 입력하세요.';
+    return;
+  }
+  const res = await fetch('/family-todo/items', {
+    method: 'POST',
+    headers: apiHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ title, owner, due_at: dueAt, note }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    todoStatus.textContent = data.detail || 'TODO 등록 실패';
+    return;
+  }
+  todoStatus.textContent = 'TODO를 등록했습니다.';
+  todoTitleInput.value = '';
+  todoOwnerInput.value = '';
+  todoDueInput.value = '';
+  todoNoteInput.value = '';
+  todoTitleInput.focus();
+  await loadTodoState();
+}
+
+async function addBoardPost() {
+  const token = apiTokenInput.value.trim();
+  const author = boardAuthorInput.value.trim();
+  const title = boardTitleInput.value.trim();
+  const content = boardContentInput.value.trim();
+  if (!token) {
+    alert('API 토큰을 입력하세요.');
+    return;
+  }
+  if (!author || !title || !content) {
+    boardStatus.textContent = '작성자, 제목, 내용은 필수입니다.';
+    return;
+  }
+  const res = await fetch('/family-board/posts', {
+    method: 'POST',
+    headers: apiHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      author,
+      title,
+      content,
+      pinned: boardPinnedInput.checked,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    boardStatus.textContent = data.detail || '게시글 등록 실패';
+    return;
+  }
+  boardStatus.textContent = '게시글을 등록했습니다.';
+  boardTitleInput.value = '';
+  boardContentInput.value = '';
+  boardPinnedInput.checked = false;
+  await loadBoardState();
 }
 
 async function sendTextToTv() {
@@ -1014,6 +2047,28 @@ cancelBtn.disabled = true;
 
 mediaUploadBtn.addEventListener('click', uploadSelectedFiles);
 favoriteAddBtn.addEventListener('click', addFavoriteVideo);
+fridgeAddBtn.addEventListener('click', addFridgeItem);
+fridgeRefreshBtn.addEventListener('click', () => {
+  void loadFridgeState();
+});
+calendarAddBtn.addEventListener('click', addCalendarEvent);
+calendarRefreshBtn.addEventListener('click', () => {
+  void loadCalendarState();
+});
+updateMoodValueLabel();
+moodSliderInput.addEventListener('input', updateMoodValueLabel);
+moodSaveBtn.addEventListener('click', addMoodRecord);
+moodRefreshBtn.addEventListener('click', () => {
+  void loadMoodState();
+});
+todoAddBtn.addEventListener('click', addTodoItem);
+todoRefreshBtn.addEventListener('click', () => {
+  void loadTodoState();
+});
+boardAddBtn.addEventListener('click', addBoardPost);
+boardRefreshBtn.addEventListener('click', () => {
+  void loadBoardState();
+});
 tvTextSendBtn.addEventListener('click', sendTextToTv);
 tvPowerOnBtn.addEventListener('click', powerOnNow);
 tvWakeScreenBtn.addEventListener('click', wakeScreenNow);
@@ -1024,6 +2079,10 @@ standbyBtn.addEventListener('click', openStandby);
 closeStandbyBtn.addEventListener('click', closeStandby);
 newsOverlayBtn.addEventListener('click', openNewsOverlay);
 newsOverlayCloseBtn.addEventListener('click', closeNewsOverlay);
+mirrorStartBtn.addEventListener('click', startMirrorCapture);
+mirrorStopBtn.addEventListener('click', stopMirrorCapture);
+mirrorOverlayBtn.addEventListener('click', openMirrorOverlay);
+mirrorOverlayCloseBtn.addEventListener('click', closeMirrorOverlay);
 reminderOverlayCloseBtn.addEventListener('click', hideReminderOverlay);
 
 clearBoardBtn.addEventListener('click', () => {
@@ -1036,6 +2095,46 @@ commandInput.addEventListener('keydown', (event) => {
     submitCommand(commandInput.value.trim());
   }
 });
+
+for (const element of [fridgeNameInput, fridgeQuantityInput, fridgeNoteInput]) {
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      addFridgeItem();
+    }
+  });
+}
+
+for (const element of [calendarTitleInput, calendarLocationInput, calendarStartInput, calendarEndInput, calendarAttendeesInput, calendarNoteInput]) {
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      addCalendarEvent();
+    }
+  });
+}
+
+for (const element of [moodMemberInput, moodNoteInput]) {
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      addMoodRecord();
+    }
+  });
+}
+
+for (const element of [todoTitleInput, todoOwnerInput, todoDueInput, todoNoteInput]) {
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      addTodoItem();
+    }
+  });
+}
+
+for (const element of [boardAuthorInput, boardTitleInput, boardContentInput]) {
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      addBoardPost();
+    }
+  });
+}
 
 for (const chip of document.querySelectorAll('.chip')) {
   chip.addEventListener('click', () => {
@@ -1057,22 +2156,54 @@ window.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') {
     closeStandby();
     closeNewsOverlay();
+    closeMirrorOverlay();
+  }
+});
+
+window.addEventListener('beforeunload', () => {
+  stopMirrorCapture();
+  if (moodSocket && moodSocket.readyState === WebSocket.OPEN) {
+    moodSocket.close();
+  }
+  if (todoSocket && todoSocket.readyState === WebSocket.OPEN) {
+    todoSocket.close();
   }
 });
 
 window.addEventListener('resize', resizeWhiteboardCanvas);
+window.addEventListener('resize', resizeMoodChartCanvas);
 resizeWhiteboardCanvas();
+resizeMoodChartCanvas();
 connectWhiteboard();
 connectReminders();
+connectMood();
+connectTodo();
+connectBoard();
+connectMirror();
 void loadWeather();
 void loadNews();
 void loadMediaLibrary();
+void loadFridgeState();
+void loadCalendarState();
+void loadMoodState();
+void loadTodoState();
+void loadBoardState();
 void loadPowerSchedules();
 void loadReminders();
+void loadMirrorState();
 reminderAtInput.value = formatDateTimeLocalOffset(new Date(Date.now() + 60 * 60 * 1000));
+calendarStartInput.value = formatDateTimeLocalOffset(new Date(Date.now() + 24 * 60 * 60 * 1000));
+calendarEndInput.value = formatDateTimeLocalOffset(new Date(Date.now() + 25 * 60 * 60 * 1000));
+calendarTagInput.value = '김은영똥';
 updateStandbyClock();
 setInterval(updateStandbyClock, 1000);
 setInterval(() => { void loadWeather(); }, 5 * 60 * 1000);
 setInterval(() => { void loadNews(); }, 5 * 60 * 1000);
+setInterval(() => { void loadFridgeState(); }, 5 * 60 * 1000);
+setInterval(() => { void loadCalendarState(); }, 60 * 1000);
+setInterval(() => { void loadMoodState(); }, 60 * 1000);
+setInterval(() => { void loadTodoState(); }, 60 * 1000);
+setInterval(() => { void loadBoardState(); }, 60 * 1000);
+setInterval(() => { void loadMirrorState(); }, 30 * 1000);
 setInterval(() => { void loadPowerSchedules(); }, 30 * 1000);
 setInterval(() => { void loadReminders(); }, 30 * 1000);

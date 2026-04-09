@@ -59,7 +59,8 @@ label {
   margin: 14px 0 8px;
 }
 
-input {
+input,
+select {
   width: 100%;
   box-sizing: border-box;
   padding: 12px 14px;
@@ -69,6 +70,10 @@ input {
   color: #e2e8f0;
 }
 
+select {
+  min-width: 140px;
+}
+
 .row {
   display: flex;
   gap: 12px;
@@ -76,6 +81,10 @@ input {
 
 .row input {
   flex: 1;
+}
+
+.row select {
+  flex: 0.8;
 }
 
 button {
@@ -204,6 +213,11 @@ button:hover {
 
 .media-box,
 .favorites-box,
+.fridge-box,
+.calendar-box,
+.mood-box,
+.todo-box,
+.board-box,
 .device-box,
 .weather-box,
 .reminder-box {
@@ -252,6 +266,8 @@ button:hover {
 
 .media-grid,
 .favorite-list,
+.fridge-list,
+.recipe-list,
 .schedule-list {
   display: flex;
   flex-direction: column;
@@ -260,6 +276,7 @@ button:hover {
 
 .media-item,
 .favorite-item,
+.fridge-item,
 .schedule-item {
   padding: 12px;
   border: 1px solid #334155;
@@ -269,6 +286,8 @@ button:hover {
 
 .media-item .meta,
 .favorite-item .meta,
+.fridge-item .meta,
+.mood-item .meta,
 .schedule-item .meta {
   color: #94a3b8;
   font-size: 13px;
@@ -277,6 +296,8 @@ button:hover {
 
 .media-item .actions,
 .favorite-item .actions,
+.fridge-item .actions,
+.mood-item .actions,
 .schedule-item .actions {
   display: flex;
   gap: 8px;
@@ -357,6 +378,326 @@ button:hover {
   margin-top: 6px;
   color: #cbd5e1;
   font-size: 14px;
+}
+
+.fridge-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.mood-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.mood-slider-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.mood-slider-row input[type="range"] {
+  flex: 1;
+  min-width: 240px;
+}
+
+.mood-value {
+  min-width: 90px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #1e293b;
+  color: #e2e8f0;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mood-chart-panel {
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  background: #020617;
+}
+
+#moodChart {
+  display: block;
+  width: 100%;
+  aspect-ratio: 12 / 4.2;
+  height: auto;
+  margin-top: 10px;
+  border-radius: 12px;
+  border: 1px solid #334155;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.14) 1px, transparent 0) 0 0 / 24px 24px,
+    #020617;
+}
+
+.mood-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.recipe-item {
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.calendar-item {
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.board-item {
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.mood-item {
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.todo-item {
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.todo-item.done {
+  border-color: #475569;
+  background: linear-gradient(180deg, rgba(100, 116, 139, 0.18), #0b1220);
+  opacity: 0.9;
+}
+
+.board-item.pinned {
+  border-color: #f59e0b;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.18), #0b1220);
+}
+
+.board-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.board-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f59e0b;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.board-content {
+  margin-top: 8px;
+  color: #dbeafe;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mood-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.mood-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mood-badge-1 {
+  background: #7c2d12;
+  color: #fff7ed;
+}
+
+.mood-badge-2 {
+  background: #c2410c;
+  color: #fff7ed;
+}
+
+.mood-badge-3 {
+  background: #475569;
+  color: #e2e8f0;
+}
+
+.mood-badge-4 {
+  background: #15803d;
+  color: #dcfce7;
+}
+
+.mood-badge-5 {
+  background: #0f766e;
+  color: #ccfbf1;
+}
+
+.todo-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.todo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.todo-badge-open {
+  background: #1d4ed8;
+  color: #dbeafe;
+}
+
+.todo-badge-done {
+  background: #15803d;
+  color: #dcfce7;
+}
+
+.todo-actions {
+  align-items: center;
+}
+
+.recipe-item .meta {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.calendar-item .meta {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.calendar-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.calendar-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.calendar-tag-brown {
+  background: #8b5e34;
+  color: #fff7ed;
+}
+
+.recipe-tags {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.recipe-steps {
+  margin: 10px 0 0 18px;
+  padding: 0;
+  color: #dbeafe;
+  font-size: 14px;
+}
+
+.calendar-actions {
+  align-items: center;
+}
+
+.board-actions {
+  align-items: center;
+}
+
+.mirror-frame,
+.mirror-overlay-frame {
+  position: relative;
+  min-height: 240px;
+  margin-top: 14px;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  background: #020617;
+  overflow: hidden;
+}
+
+.mirror-frame {
+  aspect-ratio: 16 / 9;
+}
+
+.mirror-overlay-frame {
+  flex: 1;
+}
+
+.mirror-frame img,
+.mirror-overlay-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.mirror-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #94a3b8;
+  padding: 16px;
+  text-align: center;
 }
 
 .inline-check {
@@ -478,6 +819,60 @@ button:hover {
   color: #94a3b8;
 }
 
+.mirror-box {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #1f2937;
+  background: linear-gradient(180deg, #0f172a 0%, #09101c 100%);
+}
+
+.mirror-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 80;
+  padding: 24px;
+}
+
+.mirror-overlay.hidden {
+  display: none;
+}
+
+.mirror-panel {
+  width: min(1200px, 100%);
+  height: min(92vh, 100%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid #334155;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.98));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+}
+
+.mirror-panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.mirror-overlay-title {
+  margin-top: 8px;
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 900;
+}
+
+.mirror-overlay-meta {
+  margin-top: 8px;
+  color: #94a3b8;
+}
+
 .standby-overlay {
   position: fixed;
   inset: 0;
@@ -575,6 +970,7 @@ pre {
   }
 
   .row input,
+  .row select,
   .row button {
     width: 100%;
   }
@@ -630,6 +1026,32 @@ pre {
     gap: 12px;
   }
 
+  .fridge-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .calendar-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .mood-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .todo-actions {
+    align-items: stretch;
+  }
+
+  .todo-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .board-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .media-preview {
     min-height: 180px;
   }
@@ -652,6 +1074,15 @@ pre {
   }
 
   .news-panel-head {
+    flex-direction: column;
+  }
+
+  .mirror-panel {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .mirror-panel-head {
     flex-direction: column;
   }
 

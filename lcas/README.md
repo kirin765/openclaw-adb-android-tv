@@ -16,11 +16,18 @@ MVP implementation for a local command automation server.
 - Shared realtime whiteboard
 - Local media upload and playback
 - Favorite video link launcher
+- Fridge and side-dish inventory with recipe recommendations
+- Family-shared calendar with local event storage
+- Family calendar day tags with a predefined brown tag
+- Family mood slider records with per-member trend graphs
+- Family shared TODO list with completion toggles
+- Family shared bulletin board with realtime updates
 - TV text input, power off, and delayed power off
 - TV power on and screen wake
 - Scheduled reminders that can wake the TV and show an alert on screen
 - Standby weather screen
 - Yonhap News RSS screen with a fullscreen overlay
+- Real-time mobile screen mirroring from supported Android/iOS browsers
 
 ## Run
 
@@ -59,6 +66,22 @@ Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 - `GET /reminders`
 - `POST /reminders`
 - `DELETE /reminders/{reminder_id}`
+- `GET /fridge/state`
+- `POST /fridge/items`
+- `DELETE /fridge/items/{fridge_item_id}`
+- `GET /family-calendar/state`
+- `POST /family-calendar/events`
+- `DELETE /family-calendar/events/{calendar_event_id}`
+- `GET /family-mood/state`
+- `POST /family-mood/records`
+- `DELETE /family-mood/records/{mood_record_id}`
+- `GET /family-todo/state`
+- `POST /family-todo/items`
+- `PATCH /family-todo/items/{todo_item_id}`
+- `DELETE /family-todo/items/{todo_item_id}`
+- `GET /family-board/state`
+- `POST /family-board/posts`
+- `DELETE /family-board/posts/{board_post_id}`
 - `GET /tv/power/schedule`
 - `POST /tv/power/schedule`
 - `DELETE /tv/power/schedule/{timer_id}`
@@ -73,11 +96,18 @@ Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 - Draw together on the shared whiteboard in real time
 - Upload media files and play them in the browser
 - Save favorite video links and play them quickly
+- Register fridge ingredients and side dishes, then get recipe suggestions
+- Register family events in a shared calendar and review today's schedule
+- Tag family calendar items with the predefined brown tag
+- Save family mood ratings by member and view the trend graph
+- Share a TODO list, mark items complete, and remove finished tasks
+- Post family notes and see them update live on every browser
 - Send text directly to the TV input
 - Turn the TV off now or after a delay
 - Schedule time-based reminders that wake the TV and show a visible alert
 - Show a standby weather screen
 - Show the Yonhap News feed in a standalone screen or fullscreen overlay
+- Start mobile screen mirroring from a supported browser and view it live on other devices
 - Poll task status and result automatically
 - Quick action buttons for common TV commands
 

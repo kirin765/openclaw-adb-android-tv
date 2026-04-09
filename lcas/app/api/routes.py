@@ -10,9 +10,25 @@ from app.models.schemas import (
     CommandRequest,
     FavoriteVideoLink,
     FavoriteVideoRequest,
+    FridgeItem,
+    FridgeItemRequest,
+    FridgeStateResponse,
+    FamilyBoardPost,
+    FamilyBoardPostRequest,
+    FamilyBoardStateResponse,
+    FamilyCalendarEvent,
+    FamilyCalendarEventRequest,
+    FamilyCalendarStateResponse,
+    FamilyMoodRecord,
+    FamilyMoodRecordRequest,
+    FamilyMoodStateResponse,
+    FamilyTodoItem,
+    FamilyTodoItemRequest,
+    FamilyTodoStateResponse,
     MediaLibraryResponse,
     MediaUploadRequest,
     MediaUploadResponse,
+    MirrorState,
     NewsFeedResponse,
     ReminderItem,
     ReminderRequest,
@@ -26,8 +42,21 @@ from app.models.schemas import (
     WeatherResponse,
 )
 from app.services.command_router import CommandRouter
+from app.services.family_board_hub import family_board_hub
+from app.services.family_board_service import build_family_board_service
+from app.services.family_board_store import build_family_board_store
+from app.services.family_mood_hub import family_mood_hub
+from app.services.family_mood_service import build_family_mood_service
+from app.services.family_mood_store import build_family_mood_store
+from app.services.family_todo_hub import family_todo_hub
+from app.services.family_todo_service import build_family_todo_service
+from app.services.family_todo_store import build_family_todo_store
+from app.services.family_calendar_service import build_family_calendar_service
+from app.services.fridge_service import build_fridge_service
 from app.services.learned_rule_service import LearnedRuleService
 from app.services.media_library import build_media_library
+from app.services.mirror_hub import mirror_hub
+from app.services.mirror_service import mirror_service
 from app.services.news_service import NewsService
 from app.services.power_service import power_service
 from app.services.reminder_hub import reminder_hub
@@ -148,6 +177,272 @@ def remove_favorite_video(
     return {"removed": library.remove_favorite(favorite_id)}
 
 
+@router.get("/fridge/state", response_model=FridgeStateResponse)
+def fridge_state(settings: Settings = Depends(get_settings)) -> FridgeStateResponse:
+    return build_fridge_service(settings.storage_dir).snapshot_state()
+
+
+@router.post("/fridge/items", response_model=FridgeItem)
+def add_fridge_item(
+    payload: FridgeItemRequest,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> FridgeItem:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    try:
+        return build_fridge_service(settings.storage_dir).add_item(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete("/fridge/items/{fridge_item_id}", response_model=dict[str, bool])
+def delete_fridge_item(
+    fridge_item_id: str,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, bool]:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    removed = build_fridge_service(settings.storage_dir).remove_item(fridge_item_id)
+    return {"removed": removed}
+
+
+@router.get("/family-calendar/state", response_model=FamilyCalendarStateResponse)
+def family_calendar_state(settings: Settings = Depends(get_settings)) -> FamilyCalendarStateResponse:
+    return build_family_calendar_service(settings.storage_dir).snapshot_state()
+
+
+@router.post("/family-calendar/events", response_model=FamilyCalendarEvent)
+def add_family_calendar_event(
+    payload: FamilyCalendarEventRequest,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> FamilyCalendarEvent:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    try:
+        return build_family_calendar_service(settings.storage_dir).add_event(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete("/family-calendar/events/{calendar_event_id}", response_model=dict[str, bool])
+def delete_family_calendar_event(
+    calendar_event_id: str,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, bool]:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    removed = build_family_calendar_service(settings.storage_dir).remove_event(calendar_event_id)
+    return {"removed": removed}
+
+
+@router.get("/family-mood/state", response_model=FamilyMoodStateResponse)
+def family_mood_state(settings: Settings = Depends(get_settings)) -> FamilyMoodStateResponse:
+    store = build_family_mood_store(settings.storage_dir)
+    family_mood_hub.set_store(store)
+    return build_family_mood_service(store).snapshot_state()
+
+
+@router.post("/family-mood/records", response_model=FamilyMoodRecord)
+async def add_family_mood_record(
+    payload: FamilyMoodRecordRequest,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> FamilyMoodRecord:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    store = build_family_mood_store(settings.storage_dir)
+    family_mood_hub.set_store(store)
+    service = build_family_mood_service(store)
+    try:
+        record = service.add_record(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    snapshot = service.snapshot_state()
+    await family_mood_hub.broadcast({
+        "type": "snapshot",
+        "records": [item.model_dump() for item in snapshot.records],
+        "checked_at": snapshot.checked_at,
+    })
+    return record
+
+
+@router.delete("/family-mood/records/{mood_record_id}", response_model=dict[str, bool])
+async def delete_family_mood_record(
+    mood_record_id: str,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, bool]:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    store = build_family_mood_store(settings.storage_dir)
+    family_mood_hub.set_store(store)
+    service = build_family_mood_service(store)
+    removed = service.remove_record(mood_record_id)
+    if removed:
+        snapshot = service.snapshot_state()
+        await family_mood_hub.broadcast({
+            "type": "snapshot",
+            "records": [item.model_dump() for item in snapshot.records],
+            "checked_at": snapshot.checked_at,
+        })
+    return {"removed": removed}
+
+
+@router.websocket("/ws/family-mood")
+async def family_mood_socket(websocket: WebSocket) -> None:
+    await family_mood_hub.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        family_mood_hub.disconnect(websocket)
+
+
+@router.get("/family-todo/state", response_model=FamilyTodoStateResponse)
+def family_todo_state(settings: Settings = Depends(get_settings)) -> FamilyTodoStateResponse:
+    store = build_family_todo_store(settings.storage_dir)
+    family_todo_hub.set_store(store)
+    return build_family_todo_service(store).snapshot_state()
+
+
+@router.post("/family-todo/items", response_model=FamilyTodoItem)
+async def add_family_todo_item(
+    payload: FamilyTodoItemRequest,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> FamilyTodoItem:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    store = build_family_todo_store(settings.storage_dir)
+    family_todo_hub.set_store(store)
+    service = build_family_todo_service(store)
+    try:
+        item = service.add_item(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    snapshot = service.snapshot_state()
+    await family_todo_hub.broadcast({
+        "type": "snapshot",
+        "items": [entry.model_dump() for entry in snapshot.items],
+        "checked_at": snapshot.checked_at,
+    })
+    return item
+
+
+@router.patch("/family-todo/items/{todo_item_id}", response_model=dict[str, bool])
+async def update_family_todo_item(
+    todo_item_id: str,
+    payload: dict[str, bool],
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, bool]:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    store = build_family_todo_store(settings.storage_dir)
+    family_todo_hub.set_store(store)
+    service = build_family_todo_service(store)
+    done = bool(payload.get("done", False))
+    updated = service.set_done(todo_item_id, done)
+    if updated:
+        snapshot = service.snapshot_state()
+        await family_todo_hub.broadcast({
+            "type": "snapshot",
+            "items": [entry.model_dump() for entry in snapshot.items],
+            "checked_at": snapshot.checked_at,
+        })
+    return {"updated": updated}
+
+
+@router.delete("/family-todo/items/{todo_item_id}", response_model=dict[str, bool])
+async def delete_family_todo_item(
+    todo_item_id: str,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, bool]:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    store = build_family_todo_store(settings.storage_dir)
+    family_todo_hub.set_store(store)
+    service = build_family_todo_service(store)
+    removed = service.remove_item(todo_item_id)
+    if removed:
+        snapshot = service.snapshot_state()
+        await family_todo_hub.broadcast({
+            "type": "snapshot",
+            "items": [entry.model_dump() for entry in snapshot.items],
+            "checked_at": snapshot.checked_at,
+        })
+    return {"removed": removed}
+
+
+@router.websocket("/ws/family-todo")
+async def family_todo_socket(websocket: WebSocket) -> None:
+    await family_todo_hub.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        family_todo_hub.disconnect(websocket)
+
+
+@router.get("/family-board/state", response_model=FamilyBoardStateResponse)
+def family_board_state(settings: Settings = Depends(get_settings)) -> FamilyBoardStateResponse:
+    store = build_family_board_store(settings.storage_dir)
+    return build_family_board_service(store).snapshot_state()
+
+
+@router.post("/family-board/posts", response_model=FamilyBoardPost)
+async def add_family_board_post(
+    payload: FamilyBoardPostRequest,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> FamilyBoardPost:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    store = build_family_board_store(settings.storage_dir)
+    family_board_hub.set_store(store)
+    service = build_family_board_service(store)
+    try:
+        post = service.add_post(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    snapshot = service.snapshot_state()
+    await family_board_hub.broadcast({"type": "snapshot", "posts": [item.model_dump() for item in snapshot.posts], "checked_at": snapshot.checked_at})
+    return post
+
+
+@router.delete("/family-board/posts/{board_post_id}", response_model=dict[str, bool])
+async def delete_family_board_post(
+    board_post_id: str,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, bool]:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    store = build_family_board_store(settings.storage_dir)
+    family_board_hub.set_store(store)
+    service = build_family_board_service(store)
+    removed = service.remove_post(board_post_id)
+    if removed:
+        snapshot = service.snapshot_state()
+        await family_board_hub.broadcast({"type": "snapshot", "posts": [item.model_dump() for item in snapshot.posts], "checked_at": snapshot.checked_at})
+    return {"removed": removed}
+
+
+@router.websocket("/ws/family-board")
+async def family_board_socket(websocket: WebSocket) -> None:
+    await family_board_hub.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        family_board_hub.disconnect(websocket)
+
+
 @router.get("/weather/current", response_model=WeatherResponse)
 async def current_weather(settings: Settings = Depends(get_settings)) -> WeatherResponse:
     service = WeatherService(settings.weather_latitude, settings.weather_longitude, settings.weather_label, settings.weather_units)
@@ -161,6 +456,11 @@ async def yonhap_news(settings: Settings = Depends(get_settings)) -> NewsFeedRes
         return await service.get_yonhap_feed()
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"연합뉴스 피드를 불러오지 못했습니다: {exc}") from exc
+
+
+@router.get("/mirror/state", response_model=MirrorState)
+def mirror_state() -> MirrorState:
+    return mirror_service.get_state()
 
 
 @router.post("/tv/text", response_model=CommandAcceptedResponse)
@@ -311,3 +611,33 @@ async def reminder_socket(websocket: WebSocket) -> None:
             await websocket.receive_text()
     except WebSocketDisconnect:
         reminder_hub.disconnect(websocket)
+
+
+@router.websocket("/ws/mirror")
+async def mirror_socket(websocket: WebSocket) -> None:
+    await mirror_hub.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            event_type = data.get("type")
+            if event_type == "start":
+                state = mirror_service.start(
+                    source_label=data.get("source_label", ""),
+                    started_at=data.get("started_at"),
+                )
+                await mirror_hub.broadcast({"type": "snapshot", "mirror": state.model_dump()})
+            elif event_type == "frame":
+                frame_data_url = data.get("frame_data_url")
+                if not frame_data_url:
+                    continue
+                state = mirror_service.update_frame(
+                    frame_data_url=frame_data_url,
+                    source_label=data.get("source_label", ""),
+                    started_at=data.get("started_at"),
+                )
+                await mirror_hub.broadcast({"type": "frame", "mirror": state.model_dump()})
+            elif event_type == "stop":
+                state = mirror_service.stop()
+                await mirror_hub.broadcast({"type": "stop", "mirror": state.model_dump()})
+    except WebSocketDisconnect:
+        mirror_hub.disconnect(websocket)
