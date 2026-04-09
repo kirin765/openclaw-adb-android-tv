@@ -12,6 +12,93 @@
       <h1>LCAS Control Panel</h1>
       <p class="sub">로컬 명령 자동화 시스템 MVP</p>
 
+      <div class="screen-mode-bar">
+        <button id="controlModeBtn" type="button">모바일 조작화면</button>
+        <button id="tvModeBtn" type="button">TV 표시화면</button>
+      </div>
+
+      <section class="tv-dashboard">
+        <div class="tv-standby-box">
+          <div class="section-head">
+            <div>
+              <div class="remote-title">대기화면 순환</div>
+              <p class="whiteboard-help">TV 대기화면에 보여줄 기능을 추가하면 자동으로 번갈아 표시합니다.</p>
+            </div>
+            <div class="tv-standby-actions">
+              <button id="tvStandbyAddWeatherBtn" type="button">날씨 추가</button>
+              <button id="tvStandbyAddNewsBtn" type="button">뉴스 추가</button>
+              <button id="tvStandbyAddCalendarBtn" type="button">일정 추가</button>
+              <button id="tvStandbyAddTodoBtn" type="button">TODO 추가</button>
+              <button id="tvStandbyAddMirrorBtn" type="button">미러링 추가</button>
+            </div>
+          </div>
+          <div class="row">
+            <input id="tvStandbyCustomLabelInput" type="text" placeholder="커스텀 기능 이름" />
+            <input id="tvStandbyCustomTextInput" type="text" placeholder="설명 / 표시 문구" />
+            <button id="tvStandbyCustomAddBtn" type="button">추가</button>
+          </div>
+          <div class="tv-standby-grid">
+            <div class="tv-standby-active">
+              <div class="standby-kicker">현재 표시</div>
+              <div id="tvStandbyActiveTitle" class="remote-title tv-section-title">대기 중</div>
+              <div id="tvStandbyActiveBody" class="tv-standby-body">표시할 기능을 추가하세요.</div>
+            </div>
+            <div>
+              <div class="subsection-label">표시 목록</div>
+              <div id="tvStandbyList" class="tv-standby-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tv-dashboard-grid">
+          <div class="tv-hero tv-weather-hero">
+            <div class="standby-kicker">TV 표시화면</div>
+            <div class="remote-title tv-section-title">현재 날씨</div>
+            <div id="tvWeatherLabel" class="weather-label">-</div>
+            <div id="tvWeatherTemp" class="weather-temp">--°</div>
+            <div id="tvWeatherDesc" class="weather-desc">날씨를 불러오는 중</div>
+            <div class="weather-meta">
+              <span id="tvWeatherHumidity">습도 --%</span>
+              <span id="tvWeatherWind">풍속 --m/s</span>
+              <span id="tvWeatherTime">기준 시각 --</span>
+            </div>
+          </div>
+          <div class="tv-hero tv-news-hero">
+            <div class="standby-kicker">연합뉴스</div>
+            <div class="remote-title tv-section-title">헤드라인</div>
+            <div class="news-meta">
+              <span id="tvNewsSource">-</span>
+              <span id="tvNewsUpdatedAt">업데이트 정보 없음</span>
+            </div>
+            <div id="tvNewsList" class="news-list tv-news-list"></div>
+          </div>
+          <div class="tv-hero tv-summary-hero">
+            <div class="standby-kicker">가족 요약</div>
+            <div class="remote-title tv-section-title">오늘 일정 / 할 일</div>
+            <div class="tv-summary-grid">
+              <div>
+                <div class="subsection-label">오늘 일정</div>
+                <div id="tvCalendarTodayList" class="calendar-list"></div>
+              </div>
+              <div>
+                <div class="subsection-label">진행 중 TODO</div>
+                <div id="tvTodoList" class="todo-list"></div>
+              </div>
+            </div>
+          </div>
+          <div class="tv-hero tv-mirror-hero">
+            <div class="standby-kicker">실시간 미러링</div>
+            <div class="remote-title tv-section-title">공유 화면</div>
+            <div id="tvMirrorStatus" class="fineprint">공유 중인 화면이 없습니다.</div>
+            <div class="tv-mirror-frame">
+              <img id="tvMirrorImage" alt="tv mirror preview" />
+              <div id="tvMirrorEmpty" class="mirror-empty">미러링이 시작되면 여기에 표시됩니다.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="control-view">
       <label for="apiToken">API Token</label>
       <input id="apiToken" type="password" placeholder="API 토큰 입력" />
 
@@ -378,6 +465,7 @@
         <button id="cancelBtn" type="button">취소</button>
         <pre id="resultBox">아직 실행 결과가 없습니다.</pre>
       </section>
+      </div>
     </section>
   </main>
 

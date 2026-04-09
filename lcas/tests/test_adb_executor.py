@@ -206,3 +206,49 @@ def test_adb_executor_lists_and_launches_apps(monkeypatch):
     assert any(app.label for app in apps)
     assert commands[-1] == ["adb", "shell", "am", "start", "-n", "com.netflix.ninja/.MainActivity"]
     assert launch_result.raw["package"] == "com.netflix.ninja"
+
+
+def test_adb_executor_falls_back_when_query_intent_fails(monkeypatch):
+    commands: list[list[str]] = []
+
+    class FakeProcess:
+        def __init__(self, cmd, stdout_text="", returncode=0):
+            self.cmd = cmd
+            self.returncode = returncode
+            self._stdout_text = stdout_text
+
+        def poll(self):
+            return 0 if self.returncode == 0 else self.returncode
+
+        def communicate(self):
+            return self._stdout_text, "boom"
+
+        def wait(self, timeout=None):
+            return 0
+
+        def terminate(self):
+            return None
+
+        def kill(self):
+            return None
+
+    def fake_popen(cmd, stdout=None, stderr=None, text=None):
+        command_tuple = tuple(cmd)
+        commands.append(cmd)
+        if command_tuple[:5] == ("adb", "shell", "cmd", "package", "query-intent-activities"):
+            return FakeProcess(cmd, "", returncode=255)
+        if command_tuple[:4] == ("adb", "shell", "pm", "list"):
+            return FakeProcess(cmd, "package:com.netflix.ninja\n")
+        return FakeProcess(cmd, "")
+
+    monkeypatch.setenv("DEFAULT_ANDROID_TV_IP", "192.168.0.161")
+    settings_module.get_settings.cache_clear()
+    monkeypatch.setattr(adb_executor_module.subprocess, "Popen", fake_popen)
+
+    executor = AdbExecutor()
+    apps = executor.list_launchable_apps()
+
+    assert commands[0] == ["adb", "connect", "192.168.0.161"]
+    assert ["adb", "shell", "cmd", "package", "query-intent-activities", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER"] in commands
+    assert ["adb", "shell", "pm", "list", "packages", "-3"] in commands or ["adb", "shell", "pm", "list", "packages"] in commands
+    assert apps[0].package_name == "com.netflix.ninja"

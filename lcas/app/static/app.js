@@ -1,4 +1,17 @@
 const apiTokenInput = document.getElementById('apiToken');
+const controlModeBtn = document.getElementById('controlModeBtn');
+const tvModeBtn = document.getElementById('tvModeBtn');
+const tvStandbyAddWeatherBtn = document.getElementById('tvStandbyAddWeatherBtn');
+const tvStandbyAddNewsBtn = document.getElementById('tvStandbyAddNewsBtn');
+const tvStandbyAddCalendarBtn = document.getElementById('tvStandbyAddCalendarBtn');
+const tvStandbyAddTodoBtn = document.getElementById('tvStandbyAddTodoBtn');
+const tvStandbyAddMirrorBtn = document.getElementById('tvStandbyAddMirrorBtn');
+const tvStandbyCustomLabelInput = document.getElementById('tvStandbyCustomLabelInput');
+const tvStandbyCustomTextInput = document.getElementById('tvStandbyCustomTextInput');
+const tvStandbyCustomAddBtn = document.getElementById('tvStandbyCustomAddBtn');
+const tvStandbyActiveTitle = document.getElementById('tvStandbyActiveTitle');
+const tvStandbyActiveBody = document.getElementById('tvStandbyActiveBody');
+const tvStandbyList = document.getElementById('tvStandbyList');
 const commandInput = document.getElementById('commandInput');
 const browserUrlInput = document.getElementById('browserUrlInput');
 const sendBtn = document.getElementById('sendBtn');
@@ -42,6 +55,7 @@ const calendarStatus = document.getElementById('calendarStatus');
 const calendarTodayList = document.getElementById('calendarTodayList');
 const calendarUpcomingList = document.getElementById('calendarUpcomingList');
 const calendarCheckedAt = document.getElementById('calendarCheckedAt');
+const tvCalendarTodayList = document.getElementById('tvCalendarTodayList');
 const moodMemberInput = document.getElementById('moodMemberInput');
 const moodNoteInput = document.getElementById('moodNoteInput');
 const moodSliderInput = document.getElementById('moodSliderInput');
@@ -61,6 +75,7 @@ const todoRefreshBtn = document.getElementById('todoRefreshBtn');
 const todoStatus = document.getElementById('todoStatus');
 const todoList = document.getElementById('todoList');
 const todoCheckedAt = document.getElementById('todoCheckedAt');
+const tvTodoList = document.getElementById('tvTodoList');
 const boardAuthorInput = document.getElementById('boardAuthorInput');
 const boardTitleInput = document.getElementById('boardTitleInput');
 const boardContentInput = document.getElementById('boardContentInput');
@@ -98,10 +113,19 @@ const weatherDesc = document.getElementById('weatherDesc');
 const weatherHumidity = document.getElementById('weatherHumidity');
 const weatherWind = document.getElementById('weatherWind');
 const weatherTime = document.getElementById('weatherTime');
+const tvWeatherLabel = document.getElementById('tvWeatherLabel');
+const tvWeatherTemp = document.getElementById('tvWeatherTemp');
+const tvWeatherDesc = document.getElementById('tvWeatherDesc');
+const tvWeatherHumidity = document.getElementById('tvWeatherHumidity');
+const tvWeatherWind = document.getElementById('tvWeatherWind');
+const tvWeatherTime = document.getElementById('tvWeatherTime');
 const newsOverlayBtn = document.getElementById('newsOverlayBtn');
 const newsSource = document.getElementById('newsSource');
 const newsUpdatedAt = document.getElementById('newsUpdatedAt');
 const newsList = document.getElementById('newsList');
+const tvNewsSource = document.getElementById('tvNewsSource');
+const tvNewsUpdatedAt = document.getElementById('tvNewsUpdatedAt');
+const tvNewsList = document.getElementById('tvNewsList');
 const newsOverlay = document.getElementById('newsOverlay');
 const newsOverlayTitle = document.getElementById('newsOverlayTitle');
 const newsOverlayUpdatedAt = document.getElementById('newsOverlayUpdatedAt');
@@ -113,6 +137,9 @@ const mirrorStopBtn = document.getElementById('mirrorStopBtn');
 const mirrorStatus = document.getElementById('mirrorStatus');
 const mirrorImage = document.getElementById('mirrorImage');
 const mirrorEmpty = document.getElementById('mirrorEmpty');
+const tvMirrorStatus = document.getElementById('tvMirrorStatus');
+const tvMirrorImage = document.getElementById('tvMirrorImage');
+const tvMirrorEmpty = document.getElementById('tvMirrorEmpty');
 const mirrorOverlayBtn = document.getElementById('mirrorOverlayBtn');
 const mirrorOverlay = document.getElementById('mirrorOverlay');
 const mirrorOverlayImage = document.getElementById('mirrorOverlayImage');
@@ -159,6 +186,9 @@ let moodState = { records: [], series: [], members: [], checked_at: null };
 let todoState = { items: [], checked_at: null };
 let boardState = { posts: [], checked_at: null };
 let tvAppsState = { apps: [], checked_at: null, error: null };
+let tvStandbyItems = [];
+let tvStandbyIndex = 0;
+let tvStandbyTimer = null;
 let reminderState = [];
 let newsState = null;
 let mirrorState = null;
@@ -181,6 +211,7 @@ let mirrorCaptureCtx = null;
 let mirrorCaptureTimer = null;
 let mirrorCaptureFrameId = null;
 let mirrorOverlayActive = false;
+let screenMode = 'control';
 
 function setStatus(status, result) {
   taskStatusEl.textContent = status;
@@ -472,6 +503,25 @@ function renderCalendarItems(items, mount, emptyMessage) {
   }
 }
 
+function renderCalendarSummary(items, mount, emptyMessage) {
+  mount.innerHTML = '';
+  if (!items.length) {
+    mount.innerHTML = `<div class="fineprint">${emptyMessage}</div>`;
+    return;
+  }
+
+  for (const event of items) {
+    const card = document.createElement('div');
+    card.className = 'calendar-item';
+    card.innerHTML = `
+      <strong>${event.title}</strong>
+      <div class="meta">${event.all_day ? '하루 일정' : `${formatCalendarTime(event.start_at)}${event.end_at ? ` ~ ${formatCalendarTime(event.end_at)}` : ''}`}</div>
+      <div class="calendar-tags">${event.tag ? `<span class="calendar-tag calendar-tag-brown">${event.tag}</span>` : ''}</div>
+    `;
+    mount.appendChild(card);
+  }
+}
+
 function moodLabelForValue(value) {
   const labels = {
     1: '매우 힘듦',
@@ -655,8 +705,14 @@ function formatTodoCheckedAt(value) {
 
 function renderTodoItems(items) {
   todoList.innerHTML = '';
+  if (tvTodoList) {
+    tvTodoList.innerHTML = '';
+  }
   if (!items.length) {
     todoList.innerHTML = '<div class="fineprint">등록된 TODO가 없습니다.</div>';
+    if (tvTodoList) {
+      tvTodoList.innerHTML = '<div class="fineprint">표시할 TODO가 없습니다.</div>';
+    }
     return;
   }
 
@@ -718,6 +774,19 @@ function renderTodoItems(items) {
     actions.append(toggleLabel, deleteBtn);
     card.append(actions);
     todoList.appendChild(card);
+
+    if (tvTodoList) {
+      const tvCard = document.createElement('div');
+      tvCard.className = item.done ? 'todo-item done' : 'todo-item';
+      tvCard.innerHTML = `
+        <div class="todo-row">
+          <strong>${item.title}</strong>
+          <span class="todo-badge ${item.done ? 'todo-badge-done' : 'todo-badge-open'}">${item.done ? '완료' : '진행중'}</span>
+        </div>
+        <div class="meta">${item.owner || '담당자 없음'}${item.due_at ? ` · ${formatCalendarTime(item.due_at)}` : ''}</div>
+      `;
+      tvTodoList.appendChild(tvCard);
+    }
   }
 }
 
@@ -732,6 +801,7 @@ async function loadTodoState() {
     todoState = data;
     renderTodoItems(data.items || []);
     todoCheckedAt.textContent = formatTodoCheckedAt(data.checked_at);
+    renderTvStandbySpotlight();
   } catch (err) {
     todoStatus.textContent = `TODO 목록 오류: ${err}`;
   }
@@ -1054,19 +1124,29 @@ function renderMirrorState(state) {
   if (hasFrame) {
     mirrorImage.src = state.frame_data_url;
     mirrorOverlayImage.src = state.frame_data_url;
+    if (tvMirrorImage) tvMirrorImage.src = state.frame_data_url;
     mirrorEmpty.style.display = 'none';
+    if (tvMirrorEmpty) tvMirrorEmpty.style.display = 'none';
   } else {
     mirrorImage.removeAttribute('src');
     mirrorOverlayImage.removeAttribute('src');
+    if (tvMirrorImage) tvMirrorImage.removeAttribute('src');
     mirrorEmpty.style.display = 'grid';
+    if (tvMirrorEmpty) tvMirrorEmpty.style.display = 'grid';
   }
   mirrorStatus.textContent = state && state.active
     ? `공유 중: ${state.source_label || '미지정'} · 프레임 ${state.frame_count || 0}`
     : '지원되는 모바일 브라우저에서 시작할 수 있습니다.';
+  if (tvMirrorStatus) {
+    tvMirrorStatus.textContent = state && state.active
+      ? `공유 중: ${state.source_label || '미지정'} · 프레임 ${state.frame_count || 0}`
+      : '공유 중인 화면이 없습니다.';
+  }
   mirrorOverlayTitle.textContent = state && state.active ? (state.source_label || '실시간 미러링') : '대기 중';
   mirrorOverlayMeta.textContent = state && state.active
     ? `업데이트 ${state.updated_at || '-'} · 프레임 ${state.frame_count || 0}`
     : '아직 공유 중인 화면이 없습니다.';
+  renderTvStandbySpotlight();
 }
 
 function updateWeatherDisplay(weather) {
@@ -1078,12 +1158,227 @@ function updateWeatherDisplay(weather) {
   weatherWind.textContent = weather.wind_speed == null ? '풍속 --m/s' : `풍속 ${weather.wind_speed}m/s`;
   weatherTime.textContent = weather.observation_time ? `기준 시각 ${weather.observation_time}` : '기준 시각 --';
 
+  if (tvWeatherLabel) tvWeatherLabel.textContent = weather.label || '-';
+  if (tvWeatherTemp) tvWeatherTemp.textContent = weather.temperature_c == null ? '--°' : `${Math.round(weather.temperature_c)}°`;
+  if (tvWeatherDesc) tvWeatherDesc.textContent = weather.description || '-';
+  if (tvWeatherHumidity) tvWeatherHumidity.textContent = weather.humidity == null ? '습도 --%' : `습도 ${weather.humidity}%`;
+  if (tvWeatherWind) tvWeatherWind.textContent = weather.wind_speed == null ? '풍속 --m/s' : `풍속 ${weather.wind_speed}m/s`;
+  if (tvWeatherTime) tvWeatherTime.textContent = weather.observation_time ? `기준 시각 ${weather.observation_time}` : '기준 시각 --';
+
   standbyWeatherLabel.textContent = weather.label || '-';
   standbyWeatherTemp.textContent = weather.temperature_c == null ? '--°' : `${Math.round(weather.temperature_c)}°`;
   standbyWeatherDesc.textContent = weather.description || '-';
   standbyWeatherHumidity.textContent = weather.humidity == null ? '습도 --%' : `습도 ${weather.humidity}%`;
   standbyWeatherWind.textContent = weather.wind_speed == null ? '풍속 --m/s' : `풍속 ${weather.wind_speed}m/s`;
   standbyWeatherTime.textContent = weather.observation_time ? `기준 시각 ${weather.observation_time}` : '기준 시각 --';
+}
+
+const tvStandbyStorageKey = 'lcas-tv-standby-items';
+
+function defaultTvStandbyItems() {
+  return [
+    { id: 'weather', type: 'weather', label: '날씨' },
+    { id: 'news', type: 'news', label: '연합뉴스' },
+    { id: 'calendar', type: 'calendar', label: '오늘 일정' },
+    { id: 'todo', type: 'todo', label: 'TODO' },
+    { id: 'mirror', type: 'mirror', label: '미러링' },
+  ];
+}
+
+function loadTvStandbyItems() {
+  try {
+    const raw = localStorage.getItem(tvStandbyStorageKey);
+    if (!raw) {
+      tvStandbyItems = defaultTvStandbyItems();
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed) && parsed.length) {
+      tvStandbyItems = parsed.map((item) => ({
+        id: String(item.id || crypto.randomUUID?.() || Date.now()),
+        type: String(item.type || 'custom'),
+        label: String(item.label || '기능'),
+        text: String(item.text || ''),
+      }));
+      return;
+    }
+  } catch {
+    // fall through to defaults
+  }
+  tvStandbyItems = defaultTvStandbyItems();
+}
+
+function saveTvStandbyItems() {
+  localStorage.setItem(tvStandbyStorageKey, JSON.stringify(tvStandbyItems));
+}
+
+function addTvStandbyItem(item) {
+  tvStandbyItems.push({
+    id: String(item.id || crypto.randomUUID?.() || Date.now() + Math.random()),
+    type: item.type || 'custom',
+    label: item.label || '기능',
+    text: item.text || '',
+  });
+  saveTvStandbyItems();
+  renderTvStandbyItems();
+  renderTvStandbySpotlight();
+}
+
+function removeTvStandbyItem(itemId) {
+  tvStandbyItems = tvStandbyItems.filter((item) => item.id !== itemId);
+  if (!tvStandbyItems.length) {
+    tvStandbyItems = defaultTvStandbyItems();
+  }
+  tvStandbyIndex = Math.min(tvStandbyIndex, Math.max(0, tvStandbyItems.length - 1));
+  saveTvStandbyItems();
+  renderTvStandbyItems();
+  renderTvStandbySpotlight();
+}
+
+function tvStandbyHtmlForCurrentItem(item) {
+  if (!item) {
+    return { title: '대기 중', body: '표시할 기능을 추가하세요.' };
+  }
+  if (item.type === 'weather') {
+    return {
+      title: item.label,
+      body: `
+        <div class="tv-standby-card">
+          <div class="weather-label">${weatherState?.label || '날씨'}</div>
+          <div class="weather-temp">${weatherState?.temperature_c == null ? '--°' : `${Math.round(weatherState.temperature_c)}°`}</div>
+          <div class="weather-desc">${weatherState?.description || '날씨를 불러오는 중'}</div>
+          <div class="weather-meta">
+            <span>${weatherState?.humidity == null ? '습도 --%' : `습도 ${weatherState.humidity}%`}</span>
+            <span>${weatherState?.wind_speed == null ? '풍속 --m/s' : `풍속 ${weatherState.wind_speed}m/s`}</span>
+          </div>
+        </div>
+      `,
+    };
+  }
+  if (item.type === 'news') {
+    const items = (newsState && newsState.items) ? newsState.items.slice(0, 3) : [];
+    return {
+      title: item.label,
+      body: items.length
+        ? `<div class="tv-standby-mini-list">${items.map((entry) => `<div class="tv-standby-mini-item"><strong>${entry.title}</strong><div class="meta">${entry.published_at || ''}</div></div>`).join('')}</div>`
+        : '<div class="fineprint">연합뉴스를 불러오는 중</div>',
+    };
+  }
+  if (item.type === 'calendar') {
+    const items = (calendarState && calendarState.today_events) ? calendarState.today_events.slice(0, 3) : [];
+    return {
+      title: item.label,
+      body: items.length
+        ? `<div class="tv-standby-mini-list">${items.map((entry) => `<div class="tv-standby-mini-item"><strong>${entry.title}</strong><div class="meta">${entry.all_day ? '하루 일정' : formatCalendarTime(entry.start_at)}</div></div>`).join('')}</div>`
+        : '<div class="fineprint">오늘 일정이 없습니다.</div>',
+    };
+  }
+  if (item.type === 'todo') {
+    const items = (todoState && todoState.items) ? todoState.items.filter((entry) => !entry.done).slice(0, 3) : [];
+    return {
+      title: item.label,
+      body: items.length
+        ? `<div class="tv-standby-mini-list">${items.map((entry) => `<div class="tv-standby-mini-item"><strong>${entry.title}</strong><div class="meta">${entry.owner || '담당자 없음'}</div></div>`).join('')}</div>`
+        : '<div class="fineprint">진행 중 TODO가 없습니다.</div>',
+    };
+  }
+  if (item.type === 'mirror') {
+    return {
+      title: item.label,
+      body: mirrorState && mirrorState.frame_data_url
+        ? `<img class="tv-standby-mirror" src="${mirrorState.frame_data_url}" alt="mirror preview" />`
+        : '<div class="fineprint">공유 중인 화면이 없습니다.</div>',
+    };
+  }
+  return {
+    title: item.label,
+    body: `<div class="tv-standby-card"><strong>${item.label}</strong><div class="tv-standby-text">${item.text || '설명 없음'}</div></div>`,
+  };
+}
+
+function renderTvStandbyItems() {
+  if (!tvStandbyList) return;
+  tvStandbyList.innerHTML = '';
+  if (!tvStandbyItems.length) {
+    tvStandbyList.innerHTML = '<div class="fineprint">표시할 기능이 없습니다.</div>';
+    return;
+  }
+  tvStandbyItems.forEach((item, index) => {
+    const card = document.createElement('div');
+    card.className = index === tvStandbyIndex ? 'tv-standby-item active' : 'tv-standby-item';
+    card.innerHTML = `
+      <strong>${item.label}</strong>
+      <div class="meta">${item.type === 'custom' ? (item.text || '커스텀 기능') : item.type}</div>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.textContent = '삭제';
+    removeBtn.addEventListener('click', () => removeTvStandbyItem(item.id));
+    actions.append(removeBtn);
+    card.append(actions);
+    tvStandbyList.appendChild(card);
+  });
+}
+
+function renderTvStandbySpotlight() {
+  if (!tvStandbyActiveTitle || !tvStandbyActiveBody) return;
+  if (!tvStandbyItems.length) {
+    tvStandbyActiveTitle.textContent = '대기 중';
+    tvStandbyActiveBody.textContent = '표시할 기능을 추가하세요.';
+    return;
+  }
+  const item = tvStandbyItems[tvStandbyIndex % tvStandbyItems.length];
+  const snapshot = tvStandbyHtmlForCurrentItem(item);
+  tvStandbyActiveTitle.textContent = snapshot.title;
+  tvStandbyActiveBody.innerHTML = snapshot.body;
+  renderTvStandbyItems();
+}
+
+function advanceTvStandby() {
+  if (!tvStandbyItems.length) return;
+  tvStandbyIndex = (tvStandbyIndex + 1) % tvStandbyItems.length;
+  renderTvStandbySpotlight();
+}
+
+function scheduleTvStandbyRotation() {
+  if (tvStandbyTimer) clearInterval(tvStandbyTimer);
+  tvStandbyTimer = setInterval(() => {
+    if (screenMode === 'tv') {
+      advanceTvStandby();
+    }
+  }, 10000);
+}
+
+function addTvStandbyPreset(type, label) {
+  const key = type || label;
+  if (tvStandbyItems.some((item) => item.type === type && item.label === label)) {
+    tvStandbyIndex = tvStandbyItems.findIndex((item) => item.type === type && item.label === label);
+    renderTvStandbySpotlight();
+    return;
+  }
+  addTvStandbyItem({
+    id: `${key}-${Date.now()}`,
+    type,
+    label,
+  });
+}
+
+function addTvStandbyCustom() {
+  const label = tvStandbyCustomLabelInput.value.trim();
+  const text = tvStandbyCustomTextInput.value.trim();
+  if (!label) {
+    return;
+  }
+  addTvStandbyItem({
+    id: `custom-${Date.now()}-${Math.random()}`,
+    type: 'custom',
+    label,
+    text,
+  });
+  tvStandbyCustomLabelInput.value = '';
+  tvStandbyCustomTextInput.value = '';
 }
 
 async function loadWeather() {
@@ -1095,6 +1390,7 @@ async function loadWeather() {
     }
     weatherState = data;
     updateWeatherDisplay(data);
+    renderTvStandbySpotlight();
   } catch (err) {
     const message = `날씨를 불러올 수 없습니다: ${err}`;
     weatherDesc.textContent = message;
@@ -1108,19 +1404,26 @@ async function loadNews() {
     const data = await res.json();
     if (!res.ok) {
       newsSource.textContent = data.detail || '연합뉴스 피드를 불러오지 못했습니다.';
+      if (tvNewsSource) tvNewsSource.textContent = data.detail || '연합뉴스 피드를 불러오지 못했습니다.';
       return;
     }
     newsState = data;
     newsSource.textContent = data.title || '연합뉴스';
     newsUpdatedAt.textContent = data.updated_at ? `업데이트 ${data.updated_at}` : '업데이트 정보 없음';
     renderNewsList(data.items || [], newsList);
+    if (tvNewsSource) tvNewsSource.textContent = data.title || '연합뉴스';
+    if (tvNewsUpdatedAt) tvNewsUpdatedAt.textContent = data.updated_at ? `업데이트 ${data.updated_at}` : '업데이트 정보 없음';
+    renderNewsList(data.items || [], tvNewsList);
     newsOverlayTitle.textContent = data.title || '헤드라인';
     newsOverlayUpdatedAt.textContent = data.updated_at ? `업데이트 ${data.updated_at}` : '업데이트 정보 없음';
     renderNewsList(data.items || [], newsOverlayList);
+    renderTvStandbySpotlight();
   } catch (err) {
     const message = `연합뉴스 피드를 불러올 수 없습니다: ${err}`;
     newsSource.textContent = message;
     newsUpdatedAt.textContent = '업데이트 실패';
+    if (tvNewsSource) tvNewsSource.textContent = message;
+    if (tvNewsUpdatedAt) tvNewsUpdatedAt.textContent = '업데이트 실패';
   }
 }
 
@@ -1193,7 +1496,11 @@ async function loadCalendarState() {
     calendarState = data;
     renderCalendarItems(data.today_events || [], calendarTodayList, '오늘 일정이 없습니다.');
     renderCalendarItems(data.upcoming_events || [], calendarUpcomingList, '다가오는 일정이 없습니다.');
+    if (tvCalendarTodayList) {
+      renderCalendarSummary(data.today_events || [], tvCalendarTodayList, '오늘 일정이 없습니다.');
+    }
     calendarCheckedAt.textContent = formatCalendarCheckedAt(data.checked_at);
+    renderTvStandbySpotlight();
   } catch (err) {
     calendarStatus.textContent = `가족 캘린더 오류: ${err}`;
   }
@@ -1327,6 +1634,23 @@ function connectMirror() {
     mirrorReconnectHandle = setTimeout(connectMirror, 1000);
   });
 }
+
+function applyScreenMode(mode) {
+  screenMode = mode === 'tv' ? 'tv' : 'control';
+  document.body.dataset.screenMode = screenMode;
+  localStorage.setItem('lcas-screen-mode', screenMode);
+  if (controlModeBtn) {
+    controlModeBtn.disabled = screenMode === 'control';
+  }
+  if (tvModeBtn) {
+    tvModeBtn.disabled = screenMode === 'tv';
+  }
+}
+
+const urlMode = new URLSearchParams(window.location.search).get('mode');
+const savedMode = localStorage.getItem('lcas-screen-mode');
+const defaultScreenMode = window.matchMedia('(max-width: 900px)').matches ? 'control' : 'tv';
+applyScreenMode(urlMode || savedMode || defaultScreenMode);
 
 function stopMirrorCapture() {
   if (mirrorCaptureTimer) {
@@ -2148,6 +2472,14 @@ sendBtn.addEventListener('click', () => {
   submitCommand(command);
 });
 
+controlModeBtn.addEventListener('click', () => {
+  applyScreenMode('control');
+});
+
+tvModeBtn.addEventListener('click', () => {
+  applyScreenMode('tv');
+});
+
 openUrlBtn.addEventListener('click', () => {
   openBrowserUrl();
 });
@@ -2253,6 +2585,36 @@ tvAppsSearchInput.addEventListener('input', () => {
   renderTvApps();
 });
 
+tvStandbyAddWeatherBtn.addEventListener('click', () => {
+  addTvStandbyPreset('weather', '날씨');
+});
+
+tvStandbyAddNewsBtn.addEventListener('click', () => {
+  addTvStandbyPreset('news', '연합뉴스');
+});
+
+tvStandbyAddCalendarBtn.addEventListener('click', () => {
+  addTvStandbyPreset('calendar', '오늘 일정');
+});
+
+tvStandbyAddTodoBtn.addEventListener('click', () => {
+  addTvStandbyPreset('todo', 'TODO');
+});
+
+tvStandbyAddMirrorBtn.addEventListener('click', () => {
+  addTvStandbyPreset('mirror', '미러링');
+});
+
+tvStandbyCustomAddBtn.addEventListener('click', addTvStandbyCustom);
+
+for (const element of [tvStandbyCustomLabelInput, tvStandbyCustomTextInput]) {
+  element.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      addTvStandbyCustom();
+    }
+  });
+}
+
 for (const chip of document.querySelectorAll('.chip')) {
   chip.addEventListener('click', () => {
     const command = chip.dataset.command;
@@ -2309,6 +2671,10 @@ void loadTvApps();
 void loadPowerSchedules();
 void loadReminders();
 void loadMirrorState();
+loadTvStandbyItems();
+renderTvStandbyItems();
+renderTvStandbySpotlight();
+scheduleTvStandbyRotation();
 reminderAtInput.value = formatDateTimeLocalOffset(new Date(Date.now() + 60 * 60 * 1000));
 calendarStartInput.value = formatDateTimeLocalOffset(new Date(Date.now() + 24 * 60 * 60 * 1000));
 calendarEndInput.value = formatDateTimeLocalOffset(new Date(Date.now() + 25 * 60 * 60 * 1000));

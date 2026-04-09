@@ -84,14 +84,27 @@ class AdbExecutor(Executor):
         adb = self.settings.adb_path
         self._connect(adb, ip, cancel_requested)
 
-        output = self._run_capture(
-            [adb, "shell", "cmd", "package", "query-intent-activities", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER"],
-            cancel_requested,
-        )
-        apps = self._parse_launchable_apps(output)
+        apps: list[TvApp] = []
+        try:
+            output = self._run_capture(
+                [adb, "shell", "cmd", "package", "query-intent-activities", "-a", "android.intent.action.MAIN", "-c", "android.intent.category.LAUNCHER"],
+                cancel_requested,
+            )
+            apps = self._parse_launchable_apps(output)
+        except subprocess.CalledProcessError:
+            apps = []
         if not apps:
-            output = self._run_capture([adb, "shell", "pm", "list", "packages", "-3"], cancel_requested)
-            apps = self._parse_package_list(output)
+            try:
+                output = self._run_capture([adb, "shell", "pm", "list", "packages", "-3"], cancel_requested)
+                apps = self._parse_package_list(output)
+            except subprocess.CalledProcessError:
+                apps = []
+        if not apps:
+            try:
+                output = self._run_capture([adb, "shell", "pm", "list", "packages"], cancel_requested)
+                apps = self._parse_package_list(output)
+            except subprocess.CalledProcessError:
+                apps = []
         return sorted(apps, key=lambda item: (item.label.lower(), item.package_name.lower()))
 
     def launch_app(self, package: str, activity: str | None = None, cancel_requested=None) -> TaskResult:

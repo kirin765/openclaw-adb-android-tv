@@ -498,7 +498,11 @@ def tv_apps(settings: Settings = Depends(get_settings)) -> TvAppListResponse:
         apps = executor.list_launchable_apps()
         return TvAppListResponse(apps=apps, checked_at=datetime.now().isoformat(timespec="seconds"))
     except Exception as exc:
-        return TvAppListResponse(apps=[], checked_at=datetime.now().isoformat(timespec="seconds"), error=str(exc))
+        return TvAppListResponse(
+            apps=[],
+            checked_at=datetime.now().isoformat(timespec="seconds"),
+            error=f"앱 목록을 불러오지 못했습니다. TV가 연결되어 있는지 확인하세요: {exc}",
+        )
 
 
 @router.post("/tv/apps/launch", response_model=dict[str, str])

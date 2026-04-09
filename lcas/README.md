@@ -5,6 +5,7 @@ MVP implementation for a local command automation server.
 ## Features
 - FastAPI HTTP API
 - Simple Web UI
+- Split-screen UI with mobile control mode and TV display mode
 - Rule-first command routing
 - Optional OpenClaw/LLM intent bridge
 - Redis + RQ async task queue
@@ -29,6 +30,7 @@ MVP implementation for a local command automation server.
 - Standby weather screen
 - Yonhap News RSS screen with a fullscreen overlay
 - Real-time mobile screen mirroring from supported Android/iOS browsers
+- TV standby screen with a rotating feature list
 
 ## Run
 
@@ -94,6 +96,8 @@ Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 - Submit natural language command
 - Let the system learn repeat commands into local rules automatically
 - Open URLs directly from the URL input
+- Switch between mobile control mode and TV display mode
+- TV display mode is the default on large screens
 - Cancel the current task from the status panel
 - Use the on-screen remote for up/down/left/right/confirm
 - Draw together on the shared whiteboard in real time
@@ -110,6 +114,7 @@ Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 - Browse installed Android TV apps and launch them with one tap
 - Schedule time-based reminders that wake the TV and show a visible alert
 - Show a standby weather screen
+- Rotate selected TV standby features on the TV screen
 - Show the Yonhap News feed in a standalone screen or fullscreen overlay
 - Start mobile screen mirroring from a supported browser and view it live on other devices
 - Poll task status and result automatically
