@@ -1,0 +1,98 @@
+rules:
+  - patterns: ["유튜브", "youtube"]
+    intent: TV_LAUNCH_APP
+    parameters:
+      app: youtube
+      package: com.google.android.youtube.tv
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["넷플릭스", "netflix"]
+    intent: TV_LAUNCH_APP
+    parameters:
+      app: netflix
+      package: com.netflix.ninja
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["홈", "home"]
+    intent: TV_KEYEVENT
+    parameters:
+      keycode: 3
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["위로", "up", "위"]
+    intent: TV_KEYEVENT
+    parameters:
+      keycode: 19
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["아래로", "down", "아래"]
+    intent: TV_KEYEVENT
+    parameters:
+      keycode: 20
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["왼쪽", "left"]
+    intent: TV_KEYEVENT
+    parameters:
+      keycode: 21
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["오른쪽", "right"]
+    intent: TV_KEYEVENT
+    parameters:
+      keycode: 22
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["확인", "ok", "enter", "엔터"]
+    intent: TV_KEYEVENT
+    parameters:
+      keycode: 23
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["전원 끄기", "전원 꺼", "power off", "끄기"]
+    intent: TV_POWER_OFF
+    parameters: {}
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["전원 켜기", "화면 켜기", "power on", "wake screen", "wake", "켜기"]
+    intent: TV_POWER_ON
+    parameters: {}
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["전원 토글", "power toggle"]
+    intent: TV_POWER_TOGGLE
+    parameters: {}
+    target_device: android_tv
+    risk_level: low
+
+  - patterns: ["잔잔한 음악", "chill music", "lofi"]
+    intent: PLAY_PLAYLIST
+    parameters:
+      type: chill
+      query: lofi chill music
+    target_device: android_tv
+    risk_level: medium
+
+  - patterns: ["브라우저", "browser", "크롬", "chrome", "웹브라우저"]
+    intent: OPEN_BROWSER
+    parameters:
+      url: about:blank
+    target_device: pc
+    risk_level: low
+
+  - patterns: ["알림", "스케줄", "schedule", "reminder"]
+    intent: OPEN_BROWSER
+    parameters:
+      url: about:blank
+    target_device: pc
+    risk_level: low

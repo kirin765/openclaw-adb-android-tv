@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LCAS Control Panel</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="panel">
+      <h1>LCAS Control Panel</h1>
+      <p class="sub">로컬 명령 자동화 시스템 MVP</p>
+
+      <label for="apiToken">API Token</label>
+      <input id="apiToken" type="password" placeholder="API 토큰 입력" />
+
+      <label for="commandInput">명령</label>
+      <div class="row">
+        <input id="commandInput" type="text" placeholder="예: 유튜브 열어줘" />
+        <button id="sendBtn">실행</button>
+      </div>
+
+      <label for="browserUrlInput">URL 열기</label>
+      <div class="row">
+        <input id="browserUrlInput" type="text" placeholder="예: https://example.com" />
+        <button id="openUrlBtn">열기</button>
+      </div>
+
+      <div class="chips">
+        <button class="chip" data-command="유튜브 열어줘">유튜브</button>
+        <button class="chip" data-command="넷플릭스 열어줘">넷플릭스</button>
+        <button class="chip" data-command="홈으로 가">홈</button>
+        <button class="chip" data-command="잔잔한 음악 틀어줘">잔잔한 음악</button>
+        <button class="chip" data-command="브라우저 열어줘">브라우저</button>
+      </div>
+
+      <section class="remote-box">
+        <div class="remote-title">리모컨</div>
+        <div class="remote-pad">
+          <div></div>
+          <button class="remote-btn" data-command="위로">▲</button>
+          <div></div>
+          <button class="remote-btn" data-command="왼쪽">◀</button>
+          <button class="remote-btn confirm" data-command="확인">확인</button>
+          <button class="remote-btn" data-command="오른쪽">▶</button>
+          <div></div>
+          <button class="remote-btn" data-command="아래로">▼</button>
+          <div></div>
+        </div>
+      </section>
+
+      <section class="whiteboard-box">
+        <div class="whiteboard-header">
+          <div>
+            <div class="remote-title">그림판</div>
+            <p class="whiteboard-help">같은 네트워크의 다른 브라우저와 실시간으로 같이 그립니다.</p>
+          </div>
+          <div class="whiteboard-tools">
+            <input id="penColor" type="color" value="#7dd3fc" aria-label="pen color" />
+            <input id="penSize" type="range" min="1" max="24" value="4" aria-label="pen size" />
+            <button id="clearBoardBtn" type="button">지우기</button>
+          </div>
+        </div>
+        <canvas id="whiteboardCanvas" width="1200" height="720"></canvas>
+      </section>
+
+      <section class="media-box">
+        <div class="section-head">
+          <div>
+            <div class="remote-title">미디어</div>
+            <p class="whiteboard-help">로컬 서버에 파일을 올리고 바로 재생합니다.</p>
+          </div>
+          <div class="media-upload-row">
+            <input id="mediaUploadInput" type="file" multiple accept="video/*,audio/*,image/*" />
+            <button id="mediaUploadBtn" type="button">업로드</button>
+          </div>
+        </div>
+        <div id="mediaStatus" class="fineprint">업로드할 파일을 선택하세요.</div>
+        <div class="media-layout">
+          <div class="media-preview">
+            <div id="mediaPreviewEmpty" class="media-empty">미디어를 선택하면 여기서 재생됩니다.</div>
+            <div id="mediaPreviewMount"></div>
+          </div>
+          <div>
+            <div class="subsection-label">업로드된 파일</div>
+            <div id="mediaGrid" class="media-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="favorites-box">
+        <div class="section-head">
+          <div>
+            <div class="remote-title">자주 보는 영상 링크</div>
+            <p class="whiteboard-help">자주 보는 링크를 저장하고 한 번에 띄웁니다.</p>
+          </div>
+        </div>
+        <div class="row">
+          <input id="favoriteTitleInput" type="text" placeholder="제목" />
+          <input id="favoriteUrlInput" type="text" placeholder="https://youtube.com/..." />
+          <button id="favoriteAddBtn" type="button">저장</button>
+        </div>
+        <div id="favoriteStatus" class="fineprint"></div>
+        <div id="favoriteList" class="favorite-list"></div>
+      </section>
+
+      <section class="device-box">
+        <div class="remote-title">입력 / 전원</div>
+        <div class="row">
+          <input id="tvTextInput" type="text" placeholder="TV에 보낼 글자" />
+          <button id="tvTextSendBtn" type="button">전송</button>
+        </div>
+        <div class="row">
+          <button id="tvPowerOnBtn" type="button">전원 켜기</button>
+          <button id="tvWakeScreenBtn" type="button">화면 깨우기</button>
+          <button id="tvPowerOffBtn" type="button">전원 끄기</button>
+          <input id="powerDelayInput" type="number" min="1" max="720" value="10" />
+          <button id="schedulePowerBtn" type="button">분 뒤 끄기</button>
+        </div>
+        <div id="powerStatus" class="fineprint"></div>
+        <div id="powerScheduleList" class="schedule-list"></div>
+      </section>
+
+      <section class="weather-box">
+        <div class="section-head">
+          <div>
+            <div class="remote-title">대기화면 / 날씨</div>
+            <p class="whiteboard-help">대기 중일 때 볼 수 있는 현재 날씨 화면입니다.</p>
+          </div>
+          <button id="standbyBtn" type="button">대기화면 보기</button>
+        </div>
+        <div class="weather-card">
+          <div id="weatherLabel" class="weather-label">-</div>
+          <div id="weatherTemp" class="weather-temp">--°</div>
+          <div id="weatherDesc" class="weather-desc">날씨를 불러오는 중</div>
+          <div class="weather-meta">
+            <span id="weatherHumidity">습도 --%</span>
+            <span id="weatherWind">풍속 --m/s</span>
+            <span id="weatherTime">기준 시각 --</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="news-box">
+        <div class="section-head">
+          <div>
+            <div class="remote-title">연합뉴스 피드</div>
+            <p class="whiteboard-help">실시간으로 연합뉴스 주요 헤드라인을 보여줍니다.</p>
+          </div>
+          <button id="newsOverlayBtn" type="button">전체화면</button>
+        </div>
+        <div class="news-meta">
+          <span id="newsSource">-</span>
+          <span id="newsUpdatedAt">업데이트 정보 없음</span>
+        </div>
+        <div id="newsList" class="news-list"></div>
+      </section>
+
+      <section class="reminder-box">
+        <div class="section-head">
+          <div>
+            <div class="remote-title">스케줄 알림</div>
+            <p class="whiteboard-help">정한 시간에 알려주고, 동시에 TV 전원을 켜서 화면이 보이게 합니다.</p>
+          </div>
+        </div>
+        <div class="row">
+          <input id="reminderTitleInput" type="text" placeholder="알림 제목" />
+          <input id="reminderNoteInput" type="text" placeholder="메모 (선택)" />
+        </div>
+        <div class="row">
+          <input id="reminderAtInput" type="datetime-local" />
+          <button id="reminderAddBtn" type="button">예약</button>
+        </div>
+        <div class="row reminder-toggles">
+          <label class="inline-check"><input id="reminderPowerOnInput" type="checkbox" checked /> 전원 켜기</label>
+          <label class="inline-check"><input id="reminderWakeInput" type="checkbox" checked /> 화면 깨우기</label>
+        </div>
+        <div id="reminderStatus" class="fineprint">알림 시간을 등록하세요.</div>
+        <div id="reminderList" class="schedule-list"></div>
+      </section>
+
+      <section class="status-box">
+        <div><strong>Task ID:</strong> <span id="taskId">-</span></div>
+        <div><strong>Status:</strong> <span id="taskStatus">idle</span></div>
+        <button id="cancelBtn" type="button">취소</button>
+        <pre id="resultBox">아직 실행 결과가 없습니다.</pre>
+      </section>
+    </section>
+  </main>
+
+  <div id="standbyOverlay" class="standby-overlay hidden">
+    <div class="standby-panel">
+      <div class="standby-top">
+        <div>
+          <div class="standby-kicker">대기화면</div>
+          <div id="standbyClock" class="standby-clock">--:--</div>
+        </div>
+        <button id="closeStandbyBtn" type="button">닫기</button>
+      </div>
+      <div class="standby-weather">
+        <div id="standbyWeatherLabel" class="weather-label">-</div>
+        <div id="standbyWeatherTemp" class="weather-temp">--°</div>
+        <div id="standbyWeatherDesc" class="weather-desc">날씨를 불러오는 중</div>
+        <div class="weather-meta">
+          <span id="standbyWeatherHumidity">습도 --%</span>
+          <span id="standbyWeatherWind">풍속 --m/s</span>
+          <span id="standbyWeatherTime">기준 시각 --</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reminderOverlay" class="reminder-overlay hidden">
+    <div class="reminder-panel">
+      <div class="reminder-panel-head">
+        <div>
+          <div class="standby-kicker">알림 도착</div>
+          <div id="reminderOverlayTitle" class="reminder-overlay-title">알림</div>
+        </div>
+        <button id="reminderOverlayCloseBtn" type="button">닫기</button>
+      </div>
+      <div id="reminderOverlayNote" class="reminder-overlay-note">메모 없음</div>
+      <div id="reminderOverlayTime" class="reminder-overlay-time">예정 시각 -</div>
+    </div>
+  </div>
+
+  <div id="newsOverlay" class="news-overlay hidden">
+    <div class="news-panel">
+      <div class="news-panel-head">
+        <div>
+          <div class="standby-kicker">연합뉴스</div>
+          <div id="newsOverlayTitle" class="news-overlay-title">헤드라인</div>
+          <div id="newsOverlayUpdatedAt" class="news-overlay-updated">업데이트 정보 없음</div>
+        </div>
+        <button id="newsOverlayCloseBtn" type="button">닫기</button>
+      </div>
+      <div id="newsOverlayList" class="news-overlay-list"></div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
