@@ -156,3 +156,53 @@ def test_adb_executor_can_power_on_and_wake_screen(monkeypatch):
     assert commands[-1] == ["adb", "shell", "input", "keyevent", "224"]
     assert power_on_result.message == "Turned power on"
     assert wake_result.message == "Woke screen"
+
+
+def test_adb_executor_lists_and_launches_apps(monkeypatch):
+    commands: list[list[str]] = []
+
+    class FakeProcess:
+        def __init__(self, cmd, stdout_text=""):
+            self.cmd = cmd
+            self.returncode = 0
+            self._stdout_text = stdout_text
+
+        def poll(self):
+            return 0
+
+        def communicate(self):
+            return self._stdout_text, ""
+
+        def wait(self, timeout=None):
+            return 0
+
+        def terminate(self):
+            return None
+
+        def kill(self):
+            return None
+
+    def fake_popen(cmd, stdout=None, stderr=None, text=None):
+        command_tuple = tuple(cmd)
+        commands.append(cmd)
+        if command_tuple[:5] == ("adb", "shell", "cmd", "package", "query-intent-activities"):
+            stdout_text = "ResolveInfo{123 com.netflix.ninja/.MainActivity}\nResolveInfo{456 com.google.android.youtube.tv/.HomeActivity}\n"
+        elif command_tuple[:4] == ("adb", "shell", "pm", "list"):
+            stdout_text = "package:com.netflix.ninja\npackage:com.google.android.youtube.tv\n"
+        else:
+            stdout_text = ""
+        return FakeProcess(cmd, stdout_text)
+
+    monkeypatch.setenv("DEFAULT_ANDROID_TV_IP", "192.168.0.161")
+    settings_module.get_settings.cache_clear()
+    monkeypatch.setattr(adb_executor_module.subprocess, "Popen", fake_popen)
+
+    executor = AdbExecutor()
+    apps = executor.list_launchable_apps()
+    launch_result = executor.launch_app("com.netflix.ninja", ".MainActivity")
+
+    assert commands[0] == ["adb", "connect", "192.168.0.161"]
+    assert apps[0].package_name in {"com.google.android.youtube.tv", "com.netflix.ninja"}
+    assert any(app.label for app in apps)
+    assert commands[-1] == ["adb", "shell", "am", "start", "-n", "com.netflix.ninja/.MainActivity"]
+    assert launch_result.raw["package"] == "com.netflix.ninja"

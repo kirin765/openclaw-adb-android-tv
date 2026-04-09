@@ -122,6 +122,23 @@ class TextInputRequest(BaseModel):
     text: str = Field(..., min_length=1)
 
 
+class TvApp(BaseModel):
+    package_name: str
+    label: str
+    activity_name: str = ""
+
+
+class TvAppListResponse(BaseModel):
+    apps: list[TvApp]
+    checked_at: str
+    error: str | None = None
+
+
+class TvAppLaunchRequest(BaseModel):
+    package_name: str
+    activity_name: str = ""
+
+
 class WeatherResponse(BaseModel):
     label: str
     temperature_c: float | None = None

@@ -219,6 +219,7 @@ button:hover {
 .todo-box,
 .board-box,
 .device-box,
+.tv-apps-box,
 .weather-box,
 .reminder-box {
   margin-top: 18px;
@@ -274,10 +275,23 @@ button:hover {
   gap: 8px;
 }
 
+.tv-apps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .media-item,
 .favorite-item,
 .fridge-item,
 .schedule-item {
+  padding: 12px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #0b1220;
+}
+
+.tv-app-item {
   padding: 12px;
   border: 1px solid #334155;
   border-radius: 10px;
@@ -299,6 +313,13 @@ button:hover {
 .fridge-item .actions,
 .mood-item .actions,
 .schedule-item .actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.tv-app-item .actions {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -924,6 +945,10 @@ button:hover {
 @media (max-width: 840px) {
   .media-layout {
     grid-template-columns: 1fr;
+  }
+
+  .tv-apps-box .row {
+    flex-direction: column;
   }
 
   .section-head,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from datetime import datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, WebSocket, WebSocketDisconnect
 
@@ -35,6 +36,8 @@ from app.models.schemas import (
     PowerTimerRequest,
     PowerTimerResponse,
     RiskLevel,
+    TvAppLaunchRequest,
+    TvAppListResponse,
     TaskRecord,
     TaskStatusResponse,
     IntentPayload,
@@ -42,6 +45,7 @@ from app.models.schemas import (
     WeatherResponse,
 )
 from app.services.command_router import CommandRouter
+from app.executors.adb_executor import AdbExecutor
 from app.services.family_board_hub import family_board_hub
 from app.services.family_board_service import build_family_board_service
 from app.services.family_board_store import build_family_board_store
@@ -485,6 +489,32 @@ def tv_text_input(
     task_store.create(record)
     QueueService().enqueue(record.task_id, intent.model_dump(), background_tasks)
     return CommandAcceptedResponse(task_id=record.task_id)
+
+
+@router.get("/tv/apps", response_model=TvAppListResponse)
+def tv_apps(settings: Settings = Depends(get_settings)) -> TvAppListResponse:
+    executor = AdbExecutor()
+    try:
+        apps = executor.list_launchable_apps()
+        return TvAppListResponse(apps=apps, checked_at=datetime.now().isoformat(timespec="seconds"))
+    except Exception as exc:
+        return TvAppListResponse(apps=[], checked_at=datetime.now().isoformat(timespec="seconds"), error=str(exc))
+
+
+@router.post("/tv/apps/launch", response_model=dict[str, str])
+def tv_launch_app(
+    payload: TvAppLaunchRequest,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> dict[str, str]:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+    executor = AdbExecutor()
+    try:
+        result = executor.launch_app(payload.package_name, payload.activity_name or None)
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"TV 앱 실행에 실패했습니다: {exc}") from exc
+    return {"message": result.message, "executed_command": result.executed_command or "", "device": result.device or ""}
 
 
 @router.post("/tv/power/off", response_model=dict[str, str])

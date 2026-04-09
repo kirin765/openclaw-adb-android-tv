@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.models.schemas import TvApp
 
 
 client = TestClient(app)
@@ -60,3 +61,14 @@ def test_family_todo_state():
     assert response.status_code == 200
     body = response.json()
     assert "items" in body
+
+
+def test_tv_apps_state(monkeypatch):
+    monkeypatch.setattr(
+        "app.api.routes.AdbExecutor.list_launchable_apps",
+        lambda self, cancel_requested=None: [TvApp(package_name="com.netflix.ninja", label="Netflix", activity_name=".MainActivity")],
+    )
+    response = client.get("/tv/apps")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["apps"][0]["label"] == "Netflix"

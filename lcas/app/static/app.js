@@ -79,6 +79,11 @@ const powerDelayInput = document.getElementById('powerDelayInput');
 const schedulePowerBtn = document.getElementById('schedulePowerBtn');
 const powerStatus = document.getElementById('powerStatus');
 const powerScheduleList = document.getElementById('powerScheduleList');
+const tvAppsSearchInput = document.getElementById('tvAppsSearchInput');
+const tvAppsRefreshBtn = document.getElementById('tvAppsRefreshBtn');
+const tvAppsStatus = document.getElementById('tvAppsStatus');
+const tvAppsList = document.getElementById('tvAppsList');
+const tvAppsCheckedAt = document.getElementById('tvAppsCheckedAt');
 const reminderTitleInput = document.getElementById('reminderTitleInput');
 const reminderNoteInput = document.getElementById('reminderNoteInput');
 const reminderAtInput = document.getElementById('reminderAtInput');
@@ -153,6 +158,7 @@ let calendarState = { events: [], today_events: [], upcoming_events: [], checked
 let moodState = { records: [], series: [], members: [], checked_at: null };
 let todoState = { items: [], checked_at: null };
 let boardState = { posts: [], checked_at: null };
+let tvAppsState = { apps: [], checked_at: null, error: null };
 let reminderState = [];
 let newsState = null;
 let mirrorState = null;
@@ -841,6 +847,110 @@ function renderPowerSchedules(schedules) {
     card.append(actions);
     powerScheduleList.appendChild(card);
   }
+}
+
+function formatTvAppsCheckedAt(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return `마지막 확인 ${value}`;
+  return `마지막 확인 ${date.toLocaleString('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}
+
+function filteredTvApps() {
+  const query = tvAppsSearchInput.value.trim().toLowerCase();
+  const apps = tvAppsState.apps || [];
+  if (!query) {
+    return apps;
+  }
+  return apps.filter((app) => {
+    const label = (app.label || '').toLowerCase();
+    const packageName = (app.package_name || '').toLowerCase();
+    const activity = (app.activity_name || '').toLowerCase();
+    return label.includes(query) || packageName.includes(query) || activity.includes(query);
+  });
+}
+
+function renderTvApps() {
+  const apps = filteredTvApps();
+  tvAppsList.innerHTML = '';
+  if (!apps.length) {
+    const message = tvAppsState.error ? `앱 목록을 불러오지 못했습니다: ${tvAppsState.error}` : '표시할 앱이 없습니다.';
+    tvAppsList.innerHTML = `<div class="fineprint">${message}</div>`;
+    tvAppsStatus.textContent = tvAppsState.error || '앱 목록을 불러왔습니다.';
+    tvAppsCheckedAt.textContent = formatTvAppsCheckedAt(tvAppsState.checked_at);
+    return;
+  }
+
+  tvAppsStatus.textContent = tvAppsState.error || `${apps.length}개의 앱을 찾았습니다.`;
+  tvAppsCheckedAt.textContent = formatTvAppsCheckedAt(tvAppsState.checked_at);
+
+  for (const app of apps) {
+    const card = document.createElement('div');
+    card.className = 'tv-app-item';
+    card.innerHTML = `
+      <strong>${app.label || app.package_name}</strong>
+      <div class="meta">${app.package_name}</div>
+      <div class="meta">${app.activity_name || '메인 런처'}</div>
+    `;
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+    const launchBtn = document.createElement('button');
+    launchBtn.type = 'button';
+    launchBtn.textContent = '실행';
+    launchBtn.addEventListener('click', () => {
+      void launchTvApp(app);
+    });
+    actions.append(launchBtn);
+    card.append(actions);
+    tvAppsList.appendChild(card);
+  }
+}
+
+async function loadTvApps() {
+  try {
+    const res = await fetch('/tv/apps');
+    const data = await res.json();
+    if (!res.ok) {
+      tvAppsState = { apps: [], checked_at: new Date().toISOString(), error: data.detail || '앱 목록을 불러오지 못했습니다.' };
+      renderTvApps();
+      return;
+    }
+    tvAppsState = data;
+    renderTvApps();
+  } catch (err) {
+    tvAppsState = { apps: [], checked_at: new Date().toISOString(), error: String(err) };
+    renderTvApps();
+  }
+}
+
+async function launchTvApp(app) {
+  const token = apiTokenInput.value.trim();
+  if (!token) {
+    alert('API 토큰을 입력하세요.');
+    return;
+  }
+  const res = await fetch('/tv/apps/launch', {
+    method: 'POST',
+    headers: apiHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      package_name: app.package_name,
+      activity_name: app.activity_name || '',
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    tvAppsStatus.textContent = data.detail || '앱 실행 실패';
+    return;
+  }
+  tvAppsStatus.textContent = `${app.label || app.package_name}을(를) 실행했습니다.`;
+  taskIdEl.textContent = '-';
+  setStatus('done', data.message || '앱 실행 완료');
 }
 
 function formatDateTimeLocalOffset(date) {
@@ -2069,6 +2179,9 @@ boardAddBtn.addEventListener('click', addBoardPost);
 boardRefreshBtn.addEventListener('click', () => {
   void loadBoardState();
 });
+tvAppsRefreshBtn.addEventListener('click', () => {
+  void loadTvApps();
+});
 tvTextSendBtn.addEventListener('click', sendTextToTv);
 tvPowerOnBtn.addEventListener('click', powerOnNow);
 tvWakeScreenBtn.addEventListener('click', wakeScreenNow);
@@ -2136,6 +2249,10 @@ for (const element of [boardAuthorInput, boardTitleInput, boardContentInput]) {
   });
 }
 
+tvAppsSearchInput.addEventListener('input', () => {
+  renderTvApps();
+});
+
 for (const chip of document.querySelectorAll('.chip')) {
   chip.addEventListener('click', () => {
     const command = chip.dataset.command;
@@ -2188,6 +2305,7 @@ void loadCalendarState();
 void loadMoodState();
 void loadTodoState();
 void loadBoardState();
+void loadTvApps();
 void loadPowerSchedules();
 void loadReminders();
 void loadMirrorState();
@@ -2204,6 +2322,7 @@ setInterval(() => { void loadCalendarState(); }, 60 * 1000);
 setInterval(() => { void loadMoodState(); }, 60 * 1000);
 setInterval(() => { void loadTodoState(); }, 60 * 1000);
 setInterval(() => { void loadBoardState(); }, 60 * 1000);
+setInterval(() => { void loadTvApps(); }, 5 * 60 * 1000);
 setInterval(() => { void loadMirrorState(); }, 30 * 1000);
 setInterval(() => { void loadPowerSchedules(); }, 30 * 1000);
 setInterval(() => { void loadReminders(); }, 30 * 1000);

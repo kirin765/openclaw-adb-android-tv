@@ -24,6 +24,7 @@ MVP implementation for a local command automation server.
 - Family shared bulletin board with realtime updates
 - TV text input, power off, and delayed power off
 - TV power on and screen wake
+- Android TV installed app list with click-to-launch
 - Scheduled reminders that can wake the TV and show an alert on screen
 - Standby weather screen
 - Yonhap News RSS screen with a fullscreen overlay
@@ -85,6 +86,8 @@ Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 - `GET /tv/power/schedule`
 - `POST /tv/power/schedule`
 - `DELETE /tv/power/schedule/{timer_id}`
+- `GET /tv/apps`
+- `POST /tv/apps/launch`
 
 ## Web UI
 - Enter API token
@@ -104,6 +107,7 @@ Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 - Post family notes and see them update live on every browser
 - Send text directly to the TV input
 - Turn the TV off now or after a delay
+- Browse installed Android TV apps and launch them with one tap
 - Schedule time-based reminders that wake the TV and show a visible alert
 - Show a standby weather screen
 - Show the Yonhap News feed in a standalone screen or fullscreen overlay
