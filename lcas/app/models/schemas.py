@@ -52,6 +52,7 @@ class TaskStatusResponse(BaseModel):
     result: Optional[TaskResult] = None
     error: Optional[str] = None
     cancel_requested: bool = False
+    progress: str = ""
 
 
 class IntentPayload(BaseModel):
@@ -71,6 +72,7 @@ class TaskRecord(BaseModel):
     result: Optional[TaskResult] = None
     error: Optional[str] = None
     cancel_requested: bool = False
+    progress: str = "대기 중"
 
 
 class MediaKind(str, Enum):
@@ -120,6 +122,13 @@ class FavoriteVideoRequest(BaseModel):
 
 class TextInputRequest(BaseModel):
     text: str = Field(..., min_length=1)
+
+
+class TvTrackpadRequest(BaseModel):
+    action: str = Field(default="drag")
+    delta_x: float = 0.0
+    delta_y: float = 0.0
+    duration_ms: int = Field(default=220, ge=50, le=2000)
 
 
 class TvApp(BaseModel):

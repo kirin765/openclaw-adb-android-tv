@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from app.models.schemas import FamilyCalendarEventRequest
 from app.services.family_calendar_service import FamilyCalendarService
 
 
 def test_family_calendar_service_persists_and_sorts(tmp_path):
     service = FamilyCalendarService(str(tmp_path))
+    today = datetime.now().strftime("%Y-%m-%d")
 
     service.add_event(
         FamilyCalendarEventRequest(
             title="저녁 약속",
-            start_at="2026-04-10T19:00",
-            end_at="2026-04-10T21:00",
+            start_at=f"{today}T19:00",
+            end_at=f"{today}T21:00",
             attendees="엄마, 아빠",
             tag="김은영똥",
             location="집",
@@ -21,7 +24,7 @@ def test_family_calendar_service_persists_and_sorts(tmp_path):
     service.add_event(
         FamilyCalendarEventRequest(
             title="아침 등원",
-            start_at="2026-04-10T08:30",
+            start_at=f"{today}T08:30",
             attendees="아이",
         )
     )

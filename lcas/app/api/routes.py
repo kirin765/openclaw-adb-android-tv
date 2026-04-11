@@ -39,6 +39,7 @@ from app.models.schemas import (
     RiskLevel,
     TvAppLaunchRequest,
     TvAppListResponse,
+    TvTrackpadRequest,
     TaskRecord,
     TaskStatusResponse,
     IntentPayload,
@@ -58,7 +59,6 @@ from app.services.family_todo_service import build_family_todo_service
 from app.services.family_todo_store import build_family_todo_store
 from app.services.family_calendar_service import build_family_calendar_service
 from app.services.fridge_service import build_fridge_service
-from app.services.learned_rule_service import LearnedRuleService
 from app.services.media_library import build_media_library
 from app.services.mirror_hub import mirror_hub
 from app.services.mirror_service import mirror_service
@@ -92,8 +92,6 @@ async def submit_command(
 
     router_service = CommandRouter(settings.rules_path, settings.learned_rules_path, settings.openclaw_bridge_url)
     intent = await router_service.route(request)
-    if intent.source == "openclaw_bridge":
-        LearnedRuleService(settings.learned_rules_path).learn(request.command, intent)
     record = TaskRecord(command=request.command, intent=intent)
     task_store.create(record)
 
@@ -106,7 +104,7 @@ def get_status(task_id: str) -> TaskStatusResponse:
     record = task_store.get(task_id)
     if not record:
         raise HTTPException(status_code=404, detail="Task not found")
-    return TaskStatusResponse(task_id=record.task_id, status=record.status, result=record.result, error=record.error, cancel_requested=record.cancel_requested)
+    return TaskStatusResponse(task_id=record.task_id, status=record.status, result=record.result, error=record.error, cancel_requested=record.cancel_requested, progress=record.progress)
 
 
 @router.post("/cancel/{task_id}", response_model=TaskStatusResponse)
@@ -125,7 +123,7 @@ def cancel_task(
     task_store.request_cancel(task_id)
     QueueService().cancel(task_id)
     record = task_store.get(task_id)
-    return TaskStatusResponse(task_id=record.task_id, status=record.status, result=record.result, error=record.error, cancel_requested=record.cancel_requested)
+    return TaskStatusResponse(task_id=record.task_id, status=record.status, result=record.result, error=record.error, cancel_requested=record.cancel_requested, progress=record.progress)
 
 
 @router.get("/media/library", response_model=MediaLibraryResponse)
@@ -492,6 +490,35 @@ def tv_text_input(
     return CommandAcceptedResponse(task_id=record.task_id)
 
 
+@router.post("/tv/trackpad", response_model=CommandAcceptedResponse)
+def tv_trackpad_input(
+    payload: TvTrackpadRequest,
+    background_tasks: BackgroundTasks,
+    x_api_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+) -> CommandAcceptedResponse:
+    if x_api_token != settings.api_token:
+        raise HTTPException(status_code=401, detail="Invalid API token")
+
+    intent = IntentPayload(
+        intent="TV_TRACKPAD",
+        parameters={
+            "action": payload.action,
+            "delta_x": payload.delta_x,
+            "delta_y": payload.delta_y,
+            "duration_ms": payload.duration_ms,
+        },
+        target_device="android_tv",
+        risk_level=RiskLevel.low,
+        source="web_ui",
+        requires_confirmation=False,
+    )
+    record = TaskRecord(command="트랙패드 조작", intent=intent)
+    task_store.create(record)
+    QueueService().enqueue(record.task_id, intent.model_dump(), background_tasks)
+    return CommandAcceptedResponse(task_id=record.task_id)
+
+
 @router.post("/tv/standby/open", response_model=CommandAcceptedResponse)
 def tv_open_standby(
     request: Request,
@@ -502,7 +529,7 @@ def tv_open_standby(
     if x_api_token != settings.api_token:
         raise HTTPException(status_code=401, detail="Invalid API token")
 
-    standby_url = f"{str(request.base_url).rstrip('/')}/?mode=tv&view=standby"
+    standby_url = f"{settings.web_base_url.rstrip('/')}/?mode=tv&view=standby"
     intent = IntentPayload(
         intent="TV_OPEN_URL",
         parameters={"url": standby_url},

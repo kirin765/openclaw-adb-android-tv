@@ -211,6 +211,63 @@ def test_adb_executor_can_open_tv_url(monkeypatch):
     assert result.raw["url"].endswith("view=standby")
 
 
+def test_adb_executor_can_use_trackpad_gestures(monkeypatch):
+    commands: list[list[str]] = []
+
+    class FakeProcess:
+        def __init__(self, cmd, stdout_text=""):
+            self.cmd = cmd
+            self.returncode = 0
+            self._stdout_text = stdout_text
+
+        def poll(self):
+            return 0
+
+        def communicate(self):
+            return self._stdout_text, ""
+
+        def wait(self, timeout=None):
+            return 0
+
+        def terminate(self):
+            return None
+
+        def kill(self):
+            return None
+
+    def fake_popen(cmd, stdout=None, stderr=None, text=None):
+        command_tuple = tuple(cmd)
+        commands.append(cmd)
+        if command_tuple[:4] == ("adb", "shell", "wm", "size"):
+            return FakeProcess(cmd, "Physical size: 1920x1080\n")
+        return FakeProcess(cmd, "")
+
+    monkeypatch.setenv("DEFAULT_ANDROID_TV_IP", "192.168.0.161")
+    settings_module.get_settings.cache_clear()
+    monkeypatch.setattr(adb_executor_module.subprocess, "Popen", fake_popen)
+
+    executor = AdbExecutor()
+    drag_result = executor.execute(
+        IntentPayload(
+            intent="TV_TRACKPAD",
+            parameters={"action": "drag", "delta_x": 0.25, "delta_y": -0.5, "duration_ms": 300},
+            target_device="android_tv",
+        )
+    )
+    tap_result = executor.execute(
+        IntentPayload(
+            intent="TV_TRACKPAD",
+            parameters={"action": "tap"},
+            target_device="android_tv",
+        )
+    )
+
+    assert commands[2] == ["adb", "shell", "input", "swipe", "960", "540", "1128", "351", "300"]
+    assert commands[-1] == ["adb", "shell", "input", "keyevent", "23"]
+    assert drag_result.raw["action"] == "drag"
+    assert tap_result.raw["action"] == "tap"
+
+
 def test_adb_executor_lists_and_launches_apps(monkeypatch):
     commands: list[list[str]] = []
 

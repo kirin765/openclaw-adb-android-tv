@@ -11,10 +11,12 @@ class ActionMapper:
     def __init__(self) -> None:
         self.executors = [AdbExecutor(), BrowserExecutor(), ShellExecutor(), OpenClawExecutor()]
 
-    def execute(self, intent: IntentPayload, cancel_requested=None) -> TaskResult:
+    def execute(self, intent: IntentPayload, cancel_requested=None, progress_callback=None) -> TaskResult:
         if intent.risk_level == RiskLevel.blocked:
             raise PermissionError("Blocked command")
         for executor in self.executors:
             if executor.supports(intent):
-                return executor.execute(intent, cancel_requested=cancel_requested)
+                if progress_callback:
+                    progress_callback(f"{executor.__class__.__name__} 실행 준비 중")
+                return executor.execute(intent, cancel_requested=cancel_requested, progress_callback=progress_callback)
         raise ValueError(f"No executor found for target_device={intent.target_device}, intent={intent.intent}")

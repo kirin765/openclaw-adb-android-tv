@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     rules_path: str = "config/rules.yaml"
     openclaw_bridge_url: str = "http://localhost:3000/openclaw/task"
     api_token: str = "change-me"
+    web_base_url: str = "http://192.168.0.172:8000"
     default_android_tv_id: str = "livingroom-tv"
     default_android_tv_ip: str = "192.168.0.161"
     adb_path: str = "adb"

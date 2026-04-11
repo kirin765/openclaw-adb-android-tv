@@ -22,6 +22,7 @@ class InMemoryTaskStore:
     def set_running(self, task_id: str) -> None:
         with self._lock:
             self._tasks[task_id].status = TaskStatus.running
+            self._tasks[task_id].progress = "실행 중"
 
     def set_done(self, task_id: str, result: TaskResult) -> None:
         with self._lock:
@@ -29,12 +30,14 @@ class InMemoryTaskStore:
             task.status = TaskStatus.done
             task.result = result
             task.error = None
+            task.progress = result.message
 
     def set_failed(self, task_id: str, error: str) -> None:
         with self._lock:
             task = self._tasks[task_id]
             task.status = TaskStatus.failed
             task.error = error
+            task.progress = "실패"
 
     def request_cancel(self, task_id: str) -> TaskRecord:
         with self._lock:
@@ -43,6 +46,7 @@ class InMemoryTaskStore:
                 task.cancel_requested = True
                 if task.status == TaskStatus.pending:
                     task.status = TaskStatus.canceled
+                    task.progress = "취소됨"
             return task
 
     def is_cancel_requested(self, task_id: str) -> bool:
@@ -55,6 +59,12 @@ class InMemoryTaskStore:
             task = self._tasks[task_id]
             task.status = TaskStatus.canceled
             task.error = None
+            task.progress = "취소됨"
+
+    def set_progress(self, task_id: str, progress: str) -> None:
+        with self._lock:
+            task = self._tasks[task_id]
+            task.progress = progress
 
 
 task_store = InMemoryTaskStore()

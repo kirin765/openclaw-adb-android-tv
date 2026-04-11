@@ -6,13 +6,13 @@ MVP implementation for a local command automation server.
 - FastAPI HTTP API
 - Simple Web UI
 - Split-screen UI with mobile control mode and TV display mode
-- Rule-first command routing
+- LLM-bridge command routing
 - Optional OpenClaw/LLM intent bridge
 - Redis + RQ async task queue
 - Executor abstraction for Android TV, shell, Python, and OpenClaw bridge
 - Cancel requests for running or queued tasks
 - Browser launch commands from natural language
-- Heuristic learning that stores successful natural-language commands as local rules
+- All natural-language commands route through the LLM bridge
 - Task status tracking
 - Shared realtime whiteboard
 - Local media upload and playback
@@ -25,6 +25,7 @@ MVP implementation for a local command automation server.
 - Family shared bulletin board with realtime updates
 - TV text input, power off, and delayed power off
 - TV power on and screen wake
+- TV trackpad-style mouse gestures for drag, tap, back, and home
 - Android TV installed app list with click-to-launch
 - TV standby screen launch on the TV browser
 - Scheduled reminders that can wake the TV and show an alert on screen
@@ -55,10 +56,47 @@ source .venv/bin/activate
 rq worker lcas
 ```
 
+## Watchdog
+
+To keep the web server running and restart it if it exits:
+
+```bash
+cd lcas
+chmod +x scripts/watch_lcas.sh
+./scripts/watch_lcas.sh
+```
+
+The watchdog writes to `logs/lcas-watchdog.log` and restarts uvicorn after a short delay if it stops.
+
+## Systemd
+
+The preferred always-on setup is the user service:
+
+```bash
+cd lcas
+chmod +x scripts/install_lcas_systemd.sh
+./scripts/install_lcas_systemd.sh
+```
+
+This installs `lcas.service` under `~/.config/systemd/user/`, enables it, and keeps LCAS running across SSH disconnects. The unit restarts uvicorn automatically if it exits.
+
+## Systemd
+
+For a proper always-on setup, install the user service:
+
+```bash
+cd lcas
+chmod +x scripts/install_lcas_systemd.sh
+./scripts/install_lcas_systemd.sh
+```
+
+This installs `lcas.service` under your user systemd directory and enables it to start on login. It is the preferred way to keep LCAS alive across SSH disconnects.
+
 ## Environment
 
 Copy `.env.example` to `.env` and edit values.
 By default, Android TV commands are sent to `192.168.0.161` over ADB. Change `DEFAULT_ANDROID_TV_IP` if your target device is different.
+Set `WEB_BASE_URL` to the LAN URL that your TV can reach. This is the address used when the UI sends the TV standby screen to the Android TV browser.
 Local uploads are stored under `storage/`.
 Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 
@@ -96,7 +134,7 @@ Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 ## Web UI
 - Enter API token
 - Submit natural language command
-- Let the system learn repeat commands into local rules automatically
+- Send every command through the LLM bridge for interpretation
 - Open URLs directly from the URL input
 - Switch between mobile control mode and TV display mode
 - TV display mode is the default on large screens
@@ -113,10 +151,11 @@ Weather uses Open-Meteo with `WEATHER_LATITUDE` / `WEATHER_LONGITUDE`.
 - Post family notes and see them update live on every browser
 - Send text directly to the TV input
 - Turn the TV off now or after a delay
+- Use the TV trackpad panel to drag, tap, go back, or go home
 - Browse installed Android TV apps and launch them with one tap
 - Schedule time-based reminders that wake the TV and show a visible alert
 - Show a standby weather screen
-- Open the TV standby screen directly on the TV browser
+- Open the TV standby screen directly on the TV browser as a full-screen rotating feature display
 - Rotate selected TV standby features on the TV screen
 - Show the Yonhap News feed in a standalone screen or fullscreen overlay
 - Start mobile screen mirroring from a supported browser and view it live on other devices

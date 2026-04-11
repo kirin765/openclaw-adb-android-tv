@@ -100,13 +100,14 @@ class FamilyCalendarService:
 
     def _upcoming_events(self, events: list[FamilyCalendarEvent], days: int = 7) -> list[FamilyCalendarEvent]:
         now = datetime.now()
-        cutoff = now + timedelta(days=days)
+        start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        cutoff = start_of_today + timedelta(days=days)
         upcoming: list[FamilyCalendarEvent] = []
         for event in events:
             start = self._parse_datetime(event.start_at)
             if start is None:
                 continue
-            if now <= start <= cutoff:
+            if start_of_today <= start <= cutoff:
                 upcoming.append(event)
         return upcoming[:10]
 

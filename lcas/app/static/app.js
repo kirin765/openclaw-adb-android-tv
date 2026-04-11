@@ -88,6 +88,11 @@ const boardList = document.getElementById('boardList');
 const boardCheckedAt = document.getElementById('boardCheckedAt');
 const tvTextInput = document.getElementById('tvTextInput');
 const tvTextSendBtn = document.getElementById('tvTextSendBtn');
+const tvTrackpadSurface = document.getElementById('tvTrackpadSurface');
+const tvTrackpadStatus = document.getElementById('tvTrackpadStatus');
+const tvTrackpadClickBtn = document.getElementById('tvTrackpadClickBtn');
+const tvTrackpadBackBtn = document.getElementById('tvTrackpadBackBtn');
+const tvTrackpadHomeBtn = document.getElementById('tvTrackpadHomeBtn');
 const tvPowerOnBtn = document.getElementById('tvPowerOnBtn');
 const tvWakeScreenBtn = document.getElementById('tvWakeScreenBtn');
 const tvPowerOffBtn = document.getElementById('tvPowerOffBtn');
@@ -213,6 +218,7 @@ let mirrorCaptureTimer = null;
 let mirrorCaptureFrameId = null;
 let mirrorOverlayActive = false;
 let screenMode = 'control';
+let trackpadPointerState = null;
 
 function setStatus(status, result) {
   taskStatusEl.textContent = status;
@@ -1656,7 +1662,6 @@ applyScreenMode(urlMode || savedMode || defaultScreenMode);
 if (urlView === 'standby') {
   window.setTimeout(() => {
     applyScreenMode('tv');
-    openStandby();
   }, 0);
 }
 
@@ -2057,6 +2062,111 @@ async function sendTextToTv() {
   pollTask(data.task_id, token);
 }
 
+function setTrackpadStatus(message) {
+  if (tvTrackpadStatus) {
+    tvTrackpadStatus.textContent = message;
+  }
+}
+
+async function sendTrackpadGesture(payload, successMessage) {
+  const token = apiTokenInput.value.trim();
+  if (!token) {
+    alert('API 토큰을 입력하세요.');
+    return;
+  }
+  setTrackpadStatus('트랙패드 명령을 전송하는 중...');
+  const res = await fetch('/tv/trackpad', {
+    method: 'POST',
+    headers: apiHeaders(token, { 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    setTrackpadStatus(data.detail || '트랙패드 전송 실패');
+    return;
+  }
+  taskIdEl.textContent = data.task_id;
+  setStatus('pending', successMessage || '트랙패드 작업이 등록되었습니다.');
+  setTrackpadStatus('트랙패드 명령을 보냈습니다.');
+  pollTask(data.task_id, token);
+}
+
+async function sendTrackpadTap() {
+  await sendTrackpadGesture({ action: 'tap', duration_ms: 120 }, '트랙패드 탭이 등록되었습니다.');
+}
+
+async function sendTrackpadBack() {
+  await sendTrackpadGesture({ action: 'back', duration_ms: 80 }, '뒤로 명령이 등록되었습니다.');
+}
+
+async function sendTrackpadHome() {
+  await sendTrackpadGesture({ action: 'home', duration_ms: 80 }, '홈 명령이 등록되었습니다.');
+}
+
+function trackpadPointFromEvent(event) {
+  const rect = tvTrackpadSurface.getBoundingClientRect();
+  const x = rect.width ? (event.clientX - rect.left) / rect.width : 0.5;
+  const y = rect.height ? (event.clientY - rect.top) / rect.height : 0.5;
+  return {
+    x: Math.min(1, Math.max(0, x)),
+    y: Math.min(1, Math.max(0, y)),
+  };
+}
+
+function beginTrackpadPointer(event) {
+  if (!tvTrackpadSurface) return;
+  event.preventDefault();
+  tvTrackpadSurface.setPointerCapture(event.pointerId);
+  const point = trackpadPointFromEvent(event);
+  trackpadPointerState = {
+    pointerId: event.pointerId,
+    startX: point.x,
+    startY: point.y,
+    lastX: point.x,
+    lastY: point.y,
+    startedAt: performance.now(),
+  };
+  tvTrackpadSurface.classList.add('dragging');
+  setTrackpadStatus('드래그해서 이동하고, 짧게 누르면 클릭됩니다.');
+}
+
+function moveTrackpadPointer(event) {
+  if (!trackpadPointerState || trackpadPointerState.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  const point = trackpadPointFromEvent(event);
+  trackpadPointerState.lastX = point.x;
+  trackpadPointerState.lastY = point.y;
+}
+
+async function endTrackpadPointer(event) {
+  if (!trackpadPointerState || trackpadPointerState.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  const point = trackpadPointFromEvent(event);
+  const state = trackpadPointerState;
+  trackpadPointerState = null;
+  tvTrackpadSurface.classList.remove('dragging');
+
+  const dx = point.x - state.startX;
+  const dy = point.y - state.startY;
+  const distance = Math.hypot(dx, dy);
+  const elapsed = Math.round(performance.now() - state.startedAt);
+
+  if (distance < 0.03 && elapsed < 350) {
+    await sendTrackpadGesture({ action: 'tap', duration_ms: 120 }, '트랙패드 탭이 등록되었습니다.');
+    return;
+  }
+
+  await sendTrackpadGesture(
+    {
+      action: 'drag',
+      delta_x: Math.max(-1, Math.min(1, dx)),
+      delta_y: Math.max(-1, Math.min(1, dy)),
+      duration_ms: Math.max(100, Math.min(900, elapsed)),
+    },
+    '트랙패드 드래그가 등록되었습니다.',
+  );
+}
+
 async function powerOffNow() {
   const token = apiTokenInput.value.trim();
   if (!token) {
@@ -2410,7 +2520,10 @@ async function pollTask(taskId, token) {
     try {
       const res = await fetch(`/status/${taskId}`);
       const data = await res.json();
-      setStatus(data.status, data.result || data.error || '대기 중');
+      const detail = data.status === 'done'
+        ? (data.result || data.progress || '대기 중')
+        : (data.progress || data.error || data.result || '대기 중');
+      setStatus(data.status, detail);
       cancelBtn.disabled = ['done', 'failed', 'canceled'].includes(data.status);
       if (['done', 'failed'].includes(data.status)) {
         clearInterval(pollHandle);
@@ -2553,6 +2666,9 @@ tvAppsRefreshBtn.addEventListener('click', () => {
   void loadTvApps();
 });
 tvTextSendBtn.addEventListener('click', sendTextToTv);
+tvTrackpadClickBtn.addEventListener('click', sendTrackpadTap);
+tvTrackpadBackBtn.addEventListener('click', sendTrackpadBack);
+tvTrackpadHomeBtn.addEventListener('click', sendTrackpadHome);
 tvPowerOnBtn.addEventListener('click', powerOnNow);
 tvWakeScreenBtn.addEventListener('click', wakeScreenNow);
 tvPowerOffBtn.addEventListener('click', powerOffNow);
@@ -2666,6 +2782,18 @@ for (const button of document.querySelectorAll('.remote-btn')) {
     const command = button.dataset.command;
     commandInput.value = command;
     submitCommand(command);
+  });
+}
+
+if (tvTrackpadSurface) {
+  tvTrackpadSurface.addEventListener('pointerdown', beginTrackpadPointer);
+  tvTrackpadSurface.addEventListener('pointermove', moveTrackpadPointer);
+  tvTrackpadSurface.addEventListener('pointerup', endTrackpadPointer);
+  tvTrackpadSurface.addEventListener('pointercancel', endTrackpadPointer);
+  tvTrackpadSurface.addEventListener('pointerleave', (event) => {
+    if (trackpadPointerState && event.pointerId === trackpadPointerState.pointerId) {
+      void endTrackpadPointer(event);
+    }
   });
 }
 

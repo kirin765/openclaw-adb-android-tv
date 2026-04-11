@@ -8,5 +8,7 @@ class OpenClawExecutor(Executor):
     def supports(self, intent: IntentPayload) -> bool:
         return intent.target_device == "openclaw"
 
-    def execute(self, intent: IntentPayload, cancel_requested=None) -> TaskResult:
+    def execute(self, intent: IntentPayload, cancel_requested=None, progress_callback=None) -> TaskResult:
+        if progress_callback:
+            progress_callback("OpenClaw 작업 전달 중")
         return TaskResult(message="OpenClaw delegated task prepared", device="openclaw", raw={"intent": intent.model_dump()})

@@ -13,11 +13,13 @@ class BrowserExecutor(Executor):
     def supports(self, intent: IntentPayload) -> bool:
         return intent.intent in {"OPEN_BROWSER", "OPEN_URL"}
 
-    def execute(self, intent: IntentPayload, cancel_requested=None) -> TaskResult:
+    def execute(self, intent: IntentPayload, cancel_requested=None, progress_callback=None) -> TaskResult:
         if cancel_requested and cancel_requested():
             raise TaskCancelled("Task cancelled")
 
         url = intent.parameters.get("url", "about:blank")
+        if progress_callback:
+            progress_callback(f"브라우저 여는 중: {url}")
         command = self._resolve_command(url)
         subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return TaskResult(message=f"Opened browser for {url}", executed_command=shlex.join(command), device="local-pc", raw={"url": url})

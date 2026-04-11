@@ -89,3 +89,25 @@ def test_tv_standby_open(monkeypatch):
     assert body["task_id"]
     assert captured["intent_data"]["intent"] == "TV_OPEN_URL"
     assert captured["intent_data"]["parameters"]["url"].endswith("/?mode=tv&view=standby")
+
+
+def test_tv_trackpad_input(monkeypatch):
+    captured = {}
+
+    def fake_enqueue(self, task_id, intent_data, background_tasks=None):
+        captured["task_id"] = task_id
+        captured["intent_data"] = intent_data
+        return None
+
+    monkeypatch.setattr("app.api.routes.QueueService.enqueue", fake_enqueue)
+    response = client.post(
+        "/tv/trackpad",
+        headers={"X-API-Token": "change-me"},
+        json={"action": "drag", "delta_x": 0.2, "delta_y": -0.4, "duration_ms": 250},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["task_id"]
+    assert captured["intent_data"]["intent"] == "TV_TRACKPAD"
+    assert captured["intent_data"]["parameters"]["action"] == "drag"
+    assert captured["intent_data"]["parameters"]["delta_x"] == 0.2

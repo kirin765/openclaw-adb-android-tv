@@ -11,5 +11,5 @@ class Executor(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def execute(self, intent: IntentPayload, cancel_requested=None) -> TaskResult:
+    def execute(self, intent: IntentPayload, cancel_requested=None, progress_callback=None) -> TaskResult:
         raise NotImplementedError
