@@ -4,7 +4,7 @@ import shlex
 import subprocess
 import re
 import time
-from typing import Any
+from typing import Any, Callable
 
 from app.core.settings import get_settings
 from app.executors.base import Executor
@@ -16,6 +16,19 @@ class AdbExecutor(Executor):
     def __init__(self) -> None:
         self.settings = get_settings()
         self._screen_size: tuple[int, int] | None = None
+        # dispatch 테이블 초기화
+        self._intent_handlers: dict[str, Callable[..., TaskResult]] = {
+            "TV_KEYEVENT": self._handle_keyevent,
+            "TV_LAUNCH_APP": self._handle_launch_app,
+            "PLAY_PLAYLIST": self._handle_play_playlist,
+            "TV_INPUT_TEXT": self._handle_input_text,
+            "TV_TRACKPAD": self._handle_trackpad,
+            "TV_OPEN_URL": self._handle_open_url,
+            "TV_POWER_OFF": self._handle_power_off,
+            "TV_POWER_ON": self._handle_power_on,
+            "TV_WAKE_SCREEN": self._handle_wake_screen,
+            "TV_POWER_TOGGLE": self._handle_power_toggle,
+        }
 
     def supports(self, intent: IntentPayload) -> bool:
         return intent.target_device == "android_tv"
@@ -28,176 +41,179 @@ class AdbExecutor(Executor):
             progress_callback(f"ADB {ip} 연결 중")
         self._connect(adb, ip, cancel_requested)
 
-        if intent.intent == "TV_KEYEVENT":
-            self._check_cancel(cancel_requested)
-            keycode = str(intent.parameters["keycode"])
+        handler = self._intent_handlers.get(intent.intent)
+        if handler is None:
+            raise ValueError(f"Unsupported android_tv intent: {intent.intent}")
+        return handler(intent, adb=adb, cancel_requested=cancel_requested, progress_callback=progress_callback)
+
+    def _handle_keyevent(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        keycode = str(intent.parameters["keycode"])
+        if progress_callback:
+            progress_callback(f"TV 키 입력 전송 중: {keycode}")
+        cmd = [adb, "shell", "input", "keyevent", keycode]
+        self._run(cmd, cancel_requested)
+        return TaskResult(message=f"Sent keyevent {keycode}", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
+
+    def _handle_launch_app(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        package = intent.parameters["package"]
+        activity = intent.parameters.get("activity")
+        if progress_callback:
+            progress_callback(f"TV 앱 실행 중: {package}")
+        return self.launch_app(package, activity, cancel_requested, progress_callback)
+
+    def _handle_play_playlist(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        query = intent.parameters.get("query", "lofi chill music").replace(" ", "+")
+        url = f"https://www.youtube.com/results?search_query={query}"
+        if progress_callback:
+            progress_callback("유튜브 음악 검색 열기")
+        cmd = [adb, "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url]
+        self._run(cmd, cancel_requested)
+        return TaskResult(message="Opened playlist search", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id, raw={"url": url})
+
+    def _handle_input_text(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        text = self._encode_input_text(str(intent.parameters["text"]))
+        if progress_callback:
+            progress_callback("TV 글자 입력 중")
+        cmd = [adb, "shell", "input", "text", text]
+        self._run(cmd, cancel_requested)
+        return TaskResult(message="Sent text input", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id, raw={"text": intent.parameters["text"]})
+
+    def _handle_trackpad(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        action = str(intent.parameters.get("action", "drag")).lower()
+        if action == "tap":
             if progress_callback:
-                progress_callback(f"TV 키 입력 전송 중: {keycode}")
-            cmd = [adb, "shell", "input", "keyevent", keycode]
-            self._run(cmd, cancel_requested)
-            return TaskResult(message=f"Sent keyevent {keycode}", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
-
-        if intent.intent == "TV_LAUNCH_APP":
-            self._check_cancel(cancel_requested)
-            package = intent.parameters["package"]
-            activity = intent.parameters.get("activity")
-            if progress_callback:
-                progress_callback(f"TV 앱 실행 중: {package}")
-            return self.launch_app(package, activity, cancel_requested, progress_callback)
-
-        if intent.intent == "PLAY_PLAYLIST":
-            self._check_cancel(cancel_requested)
-            query = intent.parameters.get("query", "lofi chill music").replace(" ", "+")
-            url = f"https://www.youtube.com/results?search_query={query}"
-            if progress_callback:
-                progress_callback("유튜브 음악 검색 열기")
-            cmd = [adb, "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url]
-            self._run(cmd, cancel_requested)
-            return TaskResult(message="Opened playlist search", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id, raw={"url": url})
-
-        if intent.intent == "TV_INPUT_TEXT":
-            self._check_cancel(cancel_requested)
-            text = self._encode_input_text(str(intent.parameters["text"]))
-            if progress_callback:
-                progress_callback("TV 글자 입력 중")
-            cmd = [adb, "shell", "input", "text", text]
-            self._run(cmd, cancel_requested)
-            return TaskResult(message="Sent text input", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id, raw={"text": intent.parameters["text"]})
-
-        if intent.intent == "TV_TRACKPAD":
-            self._check_cancel(cancel_requested)
-            action = str(intent.parameters.get("action", "drag")).lower()
-            if action == "tap":
-                if progress_callback:
-                    progress_callback("트랙패드 탭 전송 중")
-                cmd = [adb, "shell", "input", "keyevent", "23"]
-                self._run(cmd, cancel_requested)
-                return TaskResult(
-                    message="Tapped TV selection",
-                    executed_command=shlex.join(cmd),
-                    device=self.settings.default_android_tv_id,
-                    raw={"action": "tap"},
-                )
-
-            if action == "back":
-                if progress_callback:
-                    progress_callback("트랙패드 뒤로 전송 중")
-                cmd = [adb, "shell", "input", "keyevent", "4"]
-                self._run(cmd, cancel_requested)
-                return TaskResult(
-                    message="Sent back",
-                    executed_command=shlex.join(cmd),
-                    device=self.settings.default_android_tv_id,
-                    raw={"action": "back"},
-                )
-
-            if action == "home":
-                if progress_callback:
-                    progress_callback("트랙패드 홈 전송 중")
-                cmd = [adb, "shell", "input", "keyevent", "3"]
-                self._run(cmd, cancel_requested)
-                return TaskResult(
-                    message="Sent home",
-                    executed_command=shlex.join(cmd),
-                    device=self.settings.default_android_tv_id,
-                    raw={"action": "home"},
-                )
-
-            delta_x = float(intent.parameters.get("delta_x", 0.0))
-            delta_y = float(intent.parameters.get("delta_y", 0.0))
-            duration_ms = int(intent.parameters.get("duration_ms", 220))
-            if abs(delta_x) < 0.01 and abs(delta_y) < 0.01:
-                if progress_callback:
-                    progress_callback("트랙패드 탭 전송 중")
-                cmd = [adb, "shell", "input", "keyevent", "23"]
-                self._run(cmd, cancel_requested)
-                return TaskResult(
-                    message="Tapped TV selection",
-                    executed_command=shlex.join(cmd),
-                    device=self.settings.default_android_tv_id,
-                    raw={"action": "tap"},
-                )
-
-            width, height = self._get_screen_size(adb, cancel_requested)
-            if progress_callback:
-                progress_callback("TV 화면 크기 확인 중")
-            center_x = width // 2
-            center_y = height // 2
-            scale = float(intent.parameters.get("scale", 0.35))
-            scale = max(0.1, min(scale, 0.5))
-            end_x = self._clamp_int(center_x + int(delta_x * width * scale), 0, max(0, width - 1))
-            end_y = self._clamp_int(center_y + int(delta_y * height * scale), 0, max(0, height - 1))
-            duration_ms = max(50, min(duration_ms, 2000))
-            if progress_callback:
-                progress_callback("트랙패드 드래그 전송 중")
-            cmd = [
-                adb,
-                "shell",
-                "input",
-                "swipe",
-                str(center_x),
-                str(center_y),
-                str(end_x),
-                str(end_y),
-                str(duration_ms),
-            ]
+                progress_callback("트랙패드 탭 전송 중")
+            cmd = [adb, "shell", "input", "keyevent", "23"]
             self._run(cmd, cancel_requested)
             return TaskResult(
-                message="Sent trackpad swipe",
+                message="Tapped TV selection",
                 executed_command=shlex.join(cmd),
                 device=self.settings.default_android_tv_id,
-                raw={
-                    "action": "drag",
-                    "delta_x": delta_x,
-                    "delta_y": delta_y,
-                    "duration_ms": duration_ms,
-                    "screen_width": width,
-                    "screen_height": height,
-                },
+                raw={"action": "tap"},
             )
 
-        if intent.intent == "TV_OPEN_URL":
-            self._check_cancel(cancel_requested)
-            url = str(intent.parameters["url"])
+        if action == "back":
             if progress_callback:
-                progress_callback("TV 브라우저 열기")
-            cmd = [adb, "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url]
+                progress_callback("트랙패드 뒤로 전송 중")
+            cmd = [adb, "shell", "input", "keyevent", "4"]
             self._run(cmd, cancel_requested)
-            return TaskResult(message=f"Opened TV browser for {url}", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id, raw={"url": url})
+            return TaskResult(
+                message="Sent back",
+                executed_command=shlex.join(cmd),
+                device=self.settings.default_android_tv_id,
+                raw={"action": "back"},
+            )
 
-        if intent.intent == "TV_POWER_OFF":
-            self._check_cancel(cancel_requested)
+        if action == "home":
             if progress_callback:
-                progress_callback("TV 전원 끄는 중")
-            cmd = [adb, "shell", "input", "keyevent", "26"]
+                progress_callback("트랙패드 홈 전송 중")
+            cmd = [adb, "shell", "input", "keyevent", "3"]
             self._run(cmd, cancel_requested)
-            return TaskResult(message="Turned power off", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
+            return TaskResult(
+                message="Sent home",
+                executed_command=shlex.join(cmd),
+                device=self.settings.default_android_tv_id,
+                raw={"action": "home"},
+            )
 
-        if intent.intent == "TV_POWER_ON":
-            self._check_cancel(cancel_requested)
+        delta_x = float(intent.parameters.get("delta_x", 0.0))
+        delta_y = float(intent.parameters.get("delta_y", 0.0))
+        duration_ms = int(intent.parameters.get("duration_ms", 220))
+        if abs(delta_x) < 0.01 and abs(delta_y) < 0.01:
             if progress_callback:
-                progress_callback("TV 전원 켜는 중")
-            cmd = [adb, "shell", "input", "keyevent", "224"]
+                progress_callback("트랙패드 탭 전송 중")
+            cmd = [adb, "shell", "input", "keyevent", "23"]
             self._run(cmd, cancel_requested)
-            return TaskResult(message="Turned power on", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
+            return TaskResult(
+                message="Tapped TV selection",
+                executed_command=shlex.join(cmd),
+                device=self.settings.default_android_tv_id,
+                raw={"action": "tap"},
+            )
 
-        if intent.intent == "TV_WAKE_SCREEN":
-            self._check_cancel(cancel_requested)
-            if progress_callback:
-                progress_callback("TV 화면 깨우는 중")
-            cmd = [adb, "shell", "input", "keyevent", "224"]
-            self._run(cmd, cancel_requested)
-            return TaskResult(message="Woke screen", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
+        width, height = self._get_screen_size(adb, cancel_requested)
+        if progress_callback:
+            progress_callback("TV 화면 크기 확인 중")
+        center_x = width // 2
+        center_y = height // 2
+        scale = float(intent.parameters.get("scale", 0.35))
+        scale = max(0.1, min(scale, 0.5))
+        end_x = self._clamp_int(center_x + int(delta_x * width * scale), 0, max(0, width - 1))
+        end_y = self._clamp_int(center_y + int(delta_y * height * scale), 0, max(0, height - 1))
+        duration_ms = max(50, min(duration_ms, 2000))
+        if progress_callback:
+            progress_callback("트랙패드 드래그 전송 중")
+        cmd = [
+            adb,
+            "shell",
+            "input",
+            "swipe",
+            str(center_x),
+            str(center_y),
+            str(end_x),
+            str(end_y),
+            str(duration_ms),
+        ]
+        self._run(cmd, cancel_requested)
+        return TaskResult(
+            message="Sent trackpad swipe",
+            executed_command=shlex.join(cmd),
+            device=self.settings.default_android_tv_id,
+            raw={
+                "action": "drag",
+                "delta_x": delta_x,
+                "delta_y": delta_y,
+                "duration_ms": duration_ms,
+                "screen_width": width,
+                "screen_height": height,
+            },
+        )
 
-        if intent.intent == "TV_POWER_TOGGLE":
-            self._check_cancel(cancel_requested)
-            if progress_callback:
-                progress_callback("TV 전원 토글 중")
-            cmd = [adb, "shell", "input", "keyevent", "26"]
-            self._run(cmd, cancel_requested)
-            return TaskResult(message="Toggled power", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
+    def _handle_open_url(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        url = str(intent.parameters["url"])
+        if progress_callback:
+            progress_callback("TV 브라우저 열기")
+        cmd = [adb, "shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url]
+        self._run(cmd, cancel_requested)
+        return TaskResult(message=f"Opened TV browser for {url}", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id, raw={"url": url})
 
-        raise ValueError(f"Unsupported android_tv intent: {intent.intent}")
+    def _handle_power_off(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        if progress_callback:
+            progress_callback("TV 전원 끄는 중")
+        cmd = [adb, "shell", "input", "keyevent", "26"]
+        self._run(cmd, cancel_requested)
+        return TaskResult(message="Turned power off", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
+
+    def _handle_power_on(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        if progress_callback:
+            progress_callback("TV 전원 켜는 중")
+        cmd = [adb, "shell", "input", "keyevent", "224"]
+        self._run(cmd, cancel_requested)
+        return TaskResult(message="Turned power on", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
+
+    def _handle_wake_screen(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        if progress_callback:
+            progress_callback("TV 화면 깨우는 중")
+        cmd = [adb, "shell", "input", "keyevent", "224"]
+        self._run(cmd, cancel_requested)
+        return TaskResult(message="Woke screen", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
+
+    def _handle_power_toggle(self, intent: IntentPayload, *, adb: str, cancel_requested, progress_callback) -> TaskResult:
+        self._check_cancel(cancel_requested)
+        if progress_callback:
+            progress_callback("TV 전원 토글 중")
+        cmd = [adb, "shell", "input", "keyevent", "26"]
+        self._run(cmd, cancel_requested)
+        return TaskResult(message="Toggled power", executed_command=shlex.join(cmd), device=self.settings.default_android_tv_id)
 
     def list_launchable_apps(self, cancel_requested=None) -> list[TvApp]:
         ip = self.settings.default_android_tv_ip

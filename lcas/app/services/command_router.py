@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import asyncio
-import json
 from dataclasses import dataclass
 from typing import Any
-from urllib import error, request as urllib_request
+
+import httpx
 
 from app.models.schemas import CommandRequest, IntentPayload
 
@@ -16,28 +15,21 @@ class CommandRouter:
     openclaw_bridge_url: str
 
     async def route(self, request: CommandRequest) -> IntentPayload:
-        return await asyncio.to_thread(self._route_sync, request)
-
-    def _route_sync(self, request: CommandRequest) -> IntentPayload:
         payload = {
             "command": request.command,
             "user_id": request.user_id,
             "source": request.source,
         }
-        body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        req = urllib_request.Request(
-            self.openclaw_bridge_url,
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-
         try:
-            with urllib_request.urlopen(req, timeout=30) as response:
-                response_data = json.loads(response.read().decode("utf-8"))
-        except error.HTTPError as exc:
-            message = exc.read().decode("utf-8", errors="ignore") if exc.fp else exc.reason
-            raise RuntimeError(f"OpenClaw bridge returned HTTP {exc.code}: {message}") from exc
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    self.openclaw_bridge_url,
+                    json=payload,
+                )
+                response.raise_for_status()
+                response_data = response.json()
+        except httpx.HTTPStatusError as exc:
+            raise RuntimeError(f"OpenClaw bridge returned HTTP {exc.response.status_code}: {exc.response.text}") from exc
         except Exception as exc:
             raise RuntimeError(f"OpenClaw bridge request failed: {exc}") from exc
 
